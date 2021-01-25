@@ -25,15 +25,26 @@
  */
 package com.questhelper.panel.component;
 
+import com.questhelper.QuestHelperPlugin;
+import com.questhelper.panel.DropdownRenderer;
+import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.util.function.Consumer;
+import javax.annotation.Nonnull;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
+import static net.runelite.client.ui.PluginPanel.PANEL_WIDTH;
 import net.runelite.client.ui.components.IconTextField;
 
-public class SearchBar
+public class PanelUtil
 {
 	public static IconTextField createSearchBar(IconTextField.Icon icon, Consumer<IconTextField> updateConsumer)
 	{
@@ -63,5 +74,41 @@ public class SearchBar
 			}
 		});
 		return searchBar;
+	}
+
+	public static <T extends Enum<?>> JComboBox<T> makeDropdownBox(@Nonnull T[] values, @Nonnull String key, @Nonnull QuestHelperPlugin plugin)
+	{
+		JComboBox<T> dropdown = new JComboBox<>(values);
+		dropdown.setFocusable(false);
+		dropdown.setForeground(Color.WHITE);
+		dropdown.setRenderer(new DropdownRenderer());
+		dropdown.addItemListener(makeItemListener(plugin, key));
+		return dropdown;
+	}
+
+	public static JPanel makeDropdownPanel(JComboBox<?> dropdown, String name)
+	{
+		// Filters
+		JLabel filterName = new JLabel(name);
+		filterName.setForeground(Color.WHITE);
+
+		JPanel filtersPanel = new JPanel();
+		filtersPanel.setLayout(new BorderLayout());
+		filtersPanel.setMinimumSize(new Dimension(PANEL_WIDTH, 0));
+		filtersPanel.add(filterName, BorderLayout.CENTER);
+		filtersPanel.add(dropdown, BorderLayout.EAST);
+
+		return filtersPanel;
+	}
+
+	public static ItemListener makeItemListener(QuestHelperPlugin plugin, String key)
+	{
+		return e -> {
+			if (e.getStateChange() == ItemEvent.SELECTED)
+			{
+				Enum source = (Enum) e.getItem();
+				plugin.getConfigManager().setConfiguration("questhelper", key, source);
+			}
+		};
 	}
 }

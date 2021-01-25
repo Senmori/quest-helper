@@ -25,312 +25,111 @@
 package com.questhelper.panel;
 
 import com.questhelper.BankItems;
-import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperQuest;
-import com.questhelper.panel.component.DiscordButton;
-import com.questhelper.panel.component.QuestSelectPanel;
-import com.questhelper.panel.component.SearchBar;
-import com.questhelper.questhelpers.Quest;
+import com.questhelper.panel.component.Updatable;
+import com.questhelper.panel.component.UpdatableRequirement;
+import com.questhelper.panel.panels.QuestScreen;
+import com.questhelper.panel.panels.QuestSearchScreen;
 import com.questhelper.questhelpers.QuestHelper;
-import java.awt.*;
-import java.awt.event.ItemEvent;
-import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.steps.QuestStep;
 import net.runelite.api.Client;
 import net.runelite.api.QuestState;
-import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.DynamicGridLayout;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.PluginPanel;
-import net.runelite.client.ui.components.IconTextField;
-import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.Text;
 
 @Slf4j
-public class QuestHelperPanel extends PluginPanel
+public class QuestHelperPanel extends PluginPanel implements Updatable, UpdatableRequirement
 {
-	private final QuestOverviewPanel questOverviewPanel;
-	private final FixedWidthPanel questOverviewWrapper = new FixedWidthPanel();
-
-	private final JPanel allQuestsCompletedPanel = new JPanel();
-
-	private final JPanel allDropdownSections = new JPanel();
-	private final JComboBox<Enum> filterDropdown, difficultyDropdown, orderDropdown;
-
-	private final IconTextField searchBar;
-	private final FixedWidthPanel questListPanel = new FixedWidthPanel();
-	private final FixedWidthPanel questListWrapper = new FixedWidthPanel();
-	private final JScrollPane scrollableContainer;
-	private final int DROPDOWN_HEIGHT = 20;
-
-
-	private final ArrayList<QuestSelectPanel> questSelectPanels = new ArrayList<>();
+	private QuestScreen currentScreen;
+	private final QuestSearchScreen questSearchScreen;
 
 	private final QuestHelperPlugin questHelperPlugin;
-
-	private static final ImageIcon DISCORD_ICON;
-
-	static
-	{
-		final BufferedImage discordImage = ImageUtil.getResourceStreamFromClass(QuestHelperPlugin.class, "/discord.png");
-		final BufferedImage scaledImage = ImageUtil.resizeImage(discordImage, 16, 16);
-		DISCORD_ICON = new ImageIcon(scaledImage);
-	}
 
 	public QuestHelperPanel(QuestHelperPlugin questHelperPlugin)
 	{
 		super(false);
 
 		this.questHelperPlugin = questHelperPlugin;
-
-		setBackground(ColorScheme.DARK_GRAY_COLOR);
-		setLayout(new BorderLayout());
-
-		/* Setup overview panel */
-		JPanel titlePanel = new JPanel();
-		titlePanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-		titlePanel.setLayout(new BorderLayout());
-
-		JLabel title = new JLabel();
-		title.setText("Quest Helper");
-		title.setForeground(Color.WHITE);
-		titlePanel.add(title, BorderLayout.WEST);
-
-		DiscordButton discordBtn = new DiscordButton(DISCORD_ICON);
-		titlePanel.add(discordBtn, BorderLayout.EAST);
-
-		JLabel questsCompletedLabel = new JLabel();
-		questsCompletedLabel.setForeground(Color.GRAY);
-		questsCompletedLabel.setText(TextUtil.alignLeft(
-			"Please log in to see available quests." +
-				"Note that not all quests are available in the Quest Helper yet"));
-
-		allQuestsCompletedPanel.setLayout(new BorderLayout());
-		allQuestsCompletedPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-		allQuestsCompletedPanel.add(questsCompletedLabel);
-		allQuestsCompletedPanel.setVisible(false);
-
-		/* Search bar */
-		searchBar = SearchBar.createSearchBar(IconTextField.Icon.SEARCH, s -> onSearchBarChanged());
-
-		JPanel searchQuestsPanel = new JPanel();
-		searchQuestsPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-		searchQuestsPanel.setLayout(new BorderLayout(0, BORDER_OFFSET));
-		searchQuestsPanel.add(searchBar, BorderLayout.CENTER);
-		searchQuestsPanel.add(allQuestsCompletedPanel, BorderLayout.SOUTH);
-
-		questListPanel.setBorder(new EmptyBorder(8, 10, 0, 10));
-		questListPanel.setLayout(new DynamicGridLayout(0, 1, 0, 5));
-		questListPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		showMatchingQuests("");
-
-		// Filters
-		filterDropdown = makeNewDropdown(QuestHelperConfig.QuestFilter.values(), "filterListBy");
-		JPanel filtersPanel = makeDropdownPanel(filterDropdown, "Filters");
-		filtersPanel.setPreferredSize(new Dimension(PANEL_WIDTH, DROPDOWN_HEIGHT));
-
-		difficultyDropdown = makeNewDropdown(Quest.Difficulty.values(), "questDifficulty");
-		JPanel difficultyPanel = makeDropdownPanel(difficultyDropdown, "Difficulty");
-		difficultyPanel.setPreferredSize(new Dimension(PANEL_WIDTH, DROPDOWN_HEIGHT));
-
-		orderDropdown = makeNewDropdown(QuestHelperConfig.QuestOrdering.values(), "orderListBy");
-		JPanel orderPanel = makeDropdownPanel(orderDropdown, "Ordering");
-		orderPanel.setPreferredSize(new Dimension(PANEL_WIDTH, DROPDOWN_HEIGHT));
-
-		allDropdownSections.setBorder(new EmptyBorder(0, 0, 10, 0));
-		allDropdownSections.setLayout(new BorderLayout(0, BORDER_OFFSET));
-		allDropdownSections.add(filtersPanel, BorderLayout.NORTH);
-		allDropdownSections.add(difficultyPanel, BorderLayout.CENTER);
-		allDropdownSections.add(orderPanel, BorderLayout.SOUTH);
-
-		searchQuestsPanel.add(allDropdownSections, BorderLayout.NORTH);
-
-		// Wrapper
-		questListWrapper.setLayout(new BorderLayout());
-		questListWrapper.add(questListPanel, BorderLayout.NORTH);
-
-		scrollableContainer = new JScrollPane(questListWrapper);
-		scrollableContainer.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-
-		JPanel introDetailsPanel = new JPanel();
-		introDetailsPanel.setLayout(new BorderLayout());
-		introDetailsPanel.add(titlePanel, BorderLayout.NORTH);
-		introDetailsPanel.add(searchQuestsPanel, BorderLayout.CENTER);
-
-		add(introDetailsPanel, BorderLayout.NORTH);
-		add(scrollableContainer, BorderLayout.CENTER);
-
-		/* Layout */
-		questOverviewPanel = new QuestOverviewPanel(questHelperPlugin);
-
-		questOverviewWrapper.setLayout(new BorderLayout());
-		questOverviewWrapper.add(questOverviewPanel, BorderLayout.NORTH);
+		this.questSearchScreen = new QuestSearchScreen(questHelperPlugin, this);
+		this.currentScreen = questSearchScreen;
+		add(currentScreen);
 	}
 
-	private void onSearchBarChanged()
+	/**
+	 * Updates this panel with the currently active screen.<br>
+	 * If 'null' is provided, the default quest search screen will be displayed.
+	 * @param screen the new screen
+	 * @return true if the screen was changed.
+	 */
+	public final boolean setActiveScreen(QuestScreen screen)
 	{
-		final String text = searchBar.getText();
-
-		if ((questOverviewPanel.currentQuest == null || !text.isEmpty()))
+		if (screen != null && screen != currentScreen)
 		{
-			scrollableContainer.setViewportView(questListWrapper);
-			questSelectPanels.forEach(questListPanel::remove);
-			showMatchingQuests(text);
+			questHelperPlugin.getEventBus().register(screen);
+			questHelperPlugin.getEventBus().unregister(currentScreen);
+			this.currentScreen = screen;
+			return true;
 		}
-		else
+		if (screen == null && currentScreen != questSearchScreen)
 		{
-			scrollableContainer.setViewportView(questOverviewWrapper);
+			questHelperPlugin.getEventBus().register(questSearchScreen);
+			questHelperPlugin.getEventBus().unregister(currentScreen);
+			this.currentScreen = questSearchScreen;
+			return true;
 		}
-		revalidate();
+		return false;
 	}
 
-	private JComboBox<Enum> makeNewDropdown(Enum[] values, String key)
+	@Override
+	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
 	{
-		JComboBox<Enum> dropdown = new JComboBox<>(values);
-		dropdown.setFocusable(false);
-		dropdown.setForeground(Color.WHITE);
-		dropdown.setRenderer(new DropdownRenderer());
-		dropdown.addItemListener(e ->
-		{
-			if (e.getStateChange() == ItemEvent.SELECTED)
-			{
-				Enum source = (Enum) e.getItem();
-				questHelperPlugin.getConfigManager().setConfiguration("questhelper", key,
-					source);
-			}
-		});
-
-		return dropdown;
+		questSearchScreen.update(client, clientThread);
 	}
 
-	private JPanel makeDropdownPanel(JComboBox dropdown, String name)
+	@Override
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
-		// Filters
-		JLabel filterName = new JLabel(name);
-		filterName.setForeground(Color.WHITE);
-
-		JPanel filtersPanel = new JPanel();
-		filtersPanel.setLayout(new BorderLayout());
-		filtersPanel.setMinimumSize(new Dimension(PANEL_WIDTH, 0));
-		filtersPanel.add(filterName, BorderLayout.CENTER);
-		filtersPanel.add(dropdown, BorderLayout.EAST);
-
-		return filtersPanel;
+		questSearchScreen.updateRequirements(client, bankItems);
 	}
 
-	private void showMatchingQuests(String text)
+	@Override
+	public void updateQuests(List<QuestHelper> questHelpers, boolean loggedOut, Map<QuestHelperQuest, QuestState> completedQuests)
 	{
-		if (text.isEmpty())
-		{
-			questSelectPanels.forEach(questListPanel::add);
-			return;
-		}
-
-		final String[] searchTerms = text.toLowerCase().split(" ");
-
-		questSelectPanels.forEach(listItem ->
-		{
-			if (Text.matchesSearchTerms(Arrays.asList(searchTerms), listItem.getKeywords()))
-			{
-				questListPanel.add(listItem);
-			}
-		});
-	}
-
-	public void refresh(List<QuestHelper> questHelpers, boolean loggedOut, Map<QuestHelperQuest, QuestState> completedQuests)
-	{
-		questSelectPanels.forEach(questListPanel::remove);
-		questSelectPanels.clear();
-
-		filterDropdown.setSelectedItem(questHelperPlugin.getConfig().filterListBy());
-		difficultyDropdown.setSelectedItem(questHelperPlugin.getConfig().difficulty());
-		orderDropdown.setSelectedItem(questHelperPlugin.getConfig().orderListBy());
-
-		for (QuestHelper questHelper : questHelpers)
-		{
-			QuestState questState = completedQuests.getOrDefault(questHelper.getQuest(), QuestState.NOT_STARTED);
-			questSelectPanels.add(new QuestSelectPanel(questHelperPlugin, this, questHelper, questState));
-		}
-
-
-		Set<QuestHelperQuest> quests = completedQuests.keySet();
-		boolean hasMoreQuests = quests.stream().anyMatch(q -> completedQuests.get(q) != QuestState.FINISHED);
-		if (questSelectPanels.isEmpty() && hasMoreQuests)
-		{
-			allQuestsCompletedPanel.removeAll();
-			JLabel noMatch = new JLabel();
-			noMatch.setForeground(Color.GRAY);
-			if (loggedOut)
-			{
-				noMatch.setText(TextUtil.alignLeft("Log in to see available quests"));
-			}
-			else
-			{
-				noMatch.setText(TextUtil.alignLeft("No quests are available that match your current filters"));
-			}
-			allQuestsCompletedPanel.add(noMatch);
-		}
-		allQuestsCompletedPanel.setVisible(questSelectPanels.isEmpty());
-
-		repaint();
-		revalidate();
-		showMatchingQuests(searchBar.getText() != null ? searchBar.getText() : "");
+		questSearchScreen.updateQuests(questHelpers, loggedOut, completedQuests);
 	}
 
 	public void addQuest(QuestHelper quest, boolean isActive)
 	{
-		allDropdownSections.setVisible(false);
-		scrollableContainer.setViewportView(questOverviewWrapper);
-
-		questOverviewPanel.addQuest(quest, isActive);
-
-		repaint();
-		revalidate();
+		questSearchScreen.addQuest(quest, isActive);
 	}
 
 	public void updateSteps()
 	{
-		questOverviewPanel.updateSteps();
+		questSearchScreen.updateSteps();
 	}
 
 	public void updateHighlight(QuestStep newStep)
 	{
-		questOverviewPanel.updateHighlight(newStep);
-
-		repaint();
-		revalidate();
+		questSearchScreen.updateHighlight(newStep);
 	}
 
 	public void updateLocks()
 	{
-		questOverviewPanel.updateLocks();
-
-		repaint();
-		revalidate();
+		questSearchScreen.updateLocks();
 	}
 
 	public void removeQuest()
 	{
-		allDropdownSections.setVisible(true);
-		scrollableContainer.setViewportView(questListWrapper);
-		questOverviewPanel.removeQuest();
-
-		repaint();
-		revalidate();
+		questSearchScreen.removeQuest();
 	}
 
 	public void emptyBar()
 	{
-		searchBar.setText("");
-	}
-
-	public void updateItemRequirements(Client client, BankItems bankItems)
-	{
-		questOverviewPanel.updateRequirements(client, bankItems);
+		questSearchScreen.emptyBar();
 	}
 }

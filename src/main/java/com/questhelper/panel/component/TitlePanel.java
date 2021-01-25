@@ -25,30 +25,41 @@
  *
  */
 
-package com.questhelper.panel.panels;
+package com.questhelper.panel.component;
 
-import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
-import javax.annotation.Nonnull;
-import net.runelite.api.Client;
-import net.runelite.client.callback.ClientThread;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.SwingUtil;
 
-public class SearchPanel extends QuestPanel
+public class TitlePanel extends JPanel
 {
-	public SearchPanel(QuestHelperPlugin plugin)
+	private static final ImageIcon DISCORD_ICON;
+	static
 	{
-		super(plugin);
+		final BufferedImage discordImage = ImageUtil.getResourceStreamFromClass(QuestHelperPlugin.class, "/discord.png");
+		final BufferedImage scaledImage = ImageUtil.resizeImage(discordImage, 16, 16);
+		DISCORD_ICON = new ImageIcon(scaledImage);
 	}
 
-	@Override
-	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
+	public TitlePanel(String title)
 	{
+		setBorder(new EmptyBorder(10,10,10, 10));
+		setLayout(new BorderLayout());
 
-	}
+		JLabel titleLabel = new JLabel();
+		titleLabel.setText(title);
+		titleLabel.setForeground(Color.WHITE);
+		add(titleLabel, BorderLayout.WEST);
 
-	@Override
-	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
-	{
-
+		DiscordButton discordButton = new DiscordButton(DISCORD_ICON);
+		SwingUtil.removeButtonDecorations(discordButton);
+		add(discordButton, BorderLayout.EAST);
 	}
 }

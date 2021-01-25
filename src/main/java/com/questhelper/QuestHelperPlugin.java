@@ -45,10 +45,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -159,6 +157,7 @@ public class QuestHelperPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 
+	@Getter
 	@Inject
 	private EventBus eventBus;
 
@@ -254,6 +253,8 @@ public class QuestHelperPlugin extends Plugin
 			.priority(7)
 			.panel(panel)
 			.build();
+		//TODO: Implement events in HelperPanel to consolidate quest logic
+		//eventBus.register(panel);
 
 		clientToolbar.addNavigation(navButton);
 
@@ -284,6 +285,7 @@ public class QuestHelperPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		//panel.update(client, clientThread);
 		if (sidebarSelectedQuest != null)
 		{
 			startUpQuest(sidebarSelectedQuest);
@@ -293,6 +295,7 @@ public class QuestHelperPlugin extends Plugin
 		{
 			if (selectedQuest.getCurrentStep() != null)
 			{
+				panel.update(client, clientThread);
 				panel.updateSteps();
 				QuestStep currentStep = selectedQuest.getCurrentStep().getSidePanelStep();
 				if (currentStep != null && currentStep != lastStep)
@@ -320,7 +323,7 @@ public class QuestHelperPlugin extends Plugin
 		}
 		if (event.getItemContainer() == client.getItemContainer(InventoryID.INVENTORY))
 		{
-			clientThread.invokeLater(() -> panel.updateItemRequirements(client, bankItems));
+			clientThread.invokeLater(() -> panel.updateRequirements(client, bankItems));
 		}
 	}
 
@@ -331,7 +334,7 @@ public class QuestHelperPlugin extends Plugin
 
 		if (state == GameState.LOGIN_SCREEN)
 		{
-			panel.refresh(Collections.emptyList(), true, new HashMap<>());
+			panel.updateQuests(Collections.emptyList(), true, new HashMap<>());
 			bankItems.setItems(null);
 			if (selectedQuest != null && selectedQuest.getCurrentStep() != null)
 			{
@@ -386,7 +389,7 @@ public class QuestHelperPlugin extends Plugin
 				.stream()
 				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
 			SwingUtilities.invokeLater(() -> {
-				panel.refresh(filteredQuests, false, completedQuests);
+				panel.updateQuests(filteredQuests, false, completedQuests);
 			});
 		}
 	}
@@ -638,7 +641,7 @@ public class QuestHelperPlugin extends Plugin
 
 	public void startUpQuest(QuestHelper questHelper)
 	{
-		if (!(client.getGameState() == GameState.LOGGED_IN))
+		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -663,7 +666,7 @@ public class QuestHelperPlugin extends Plugin
 			SwingUtilities.invokeLater(() -> {
 				panel.removeQuest();
 				panel.addQuest(questHelper, true);
-				clientThread.invokeLater(() -> panel.updateItemRequirements(client, bankItems));
+				clientThread.invokeLater(() -> panel.updateRequirements(client, bankItems));
 			});
 		}
 		else

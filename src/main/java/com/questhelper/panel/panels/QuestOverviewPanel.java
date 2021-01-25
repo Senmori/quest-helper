@@ -1,32 +1,38 @@
 /*
- * Copyright (c) 2020, Zoinkwiz
- * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ *  * Copyright (c) 2021, Zoinkwiz
+ *  * All rights reserved.
+ *  *
+ *  * Redistribution and use in source and binary forms, with or without
+ *  * modification, are permitted provided that the following conditions are met:
+ *  *
+ *  * 1. Redistributions of source code must retain the above copyright notice, this
+ *  *    list of conditions and the following disclaimer.
+ *  * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *  *    this list of conditions and the following disclaimer in the documentation
+ *  *    and/or other materials provided with the distribution.
+ *  *
+ *  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ *  * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.questhelper.panel;
+package com.questhelper.panel.panels;
 
 import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
 
+import com.questhelper.QuestHelperQuest;
+import com.questhelper.panel.PanelDetails;
+import com.questhelper.panel.QuestHelperPanel;
+import com.questhelper.panel.TextUtil;
 import com.questhelper.panel.component.ActionsContainer;
 import com.questhelper.panel.component.QuestRequirementPanel;
 import com.questhelper.panel.component.QuestStepPanel;
@@ -41,6 +47,8 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import javax.annotation.Nonnull;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -49,12 +57,16 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import net.runelite.api.Client;
+import net.runelite.api.QuestState;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.ImageUtil;
 
-public class QuestOverviewPanel extends JPanel
+/**
+ *
+ */
+public class QuestOverviewPanel extends QuestScreen
 {
 	private final QuestHelperPlugin questHelperPlugin;
 	public QuestHelper currentQuest;
@@ -99,9 +111,9 @@ public class QuestOverviewPanel extends JPanel
 		INFO_ICON = new ImageIcon(infoImg);
 	}
 
-	public QuestOverviewPanel(QuestHelperPlugin questHelperPlugin)
+	public QuestOverviewPanel(QuestHelperPlugin questHelperPlugin, QuestHelperPanel rootPanel)
 	{
-		super();
+		super(questHelperPlugin, rootPanel);
 		this.questHelperPlugin = questHelperPlugin;
 
 		BoxLayout boxLayout = new BoxLayout(this, BoxLayout.Y_AXIS);
@@ -190,7 +202,7 @@ public class QuestOverviewPanel extends JPanel
 
 		if (quest.getCurrentStep() != null)
 		{
-			questNameLabel.setText(quest.getQuest().getName());
+			actionsContainer.getQuestNameLabel().setText(quest.getQuest().getName());
 			actionsContainer.setVisible(true);
 
 			setupQuestRequirements(quest);
@@ -438,12 +450,6 @@ public class QuestOverviewPanel extends JPanel
 		}
 	}
 
-	@Override
-	public Dimension getPreferredSize()
-	{
-		return new Dimension(PluginPanel.PANEL_WIDTH, super.getPreferredSize().height);
-	}
-
 	public void updateRequirements(Client client, BankItems bankItems)
 	{
 		updateRequirementPanels(client, requirementPanels, bankItems);
@@ -454,5 +460,17 @@ public class QuestOverviewPanel extends JPanel
 	public void updateRequirementPanels(Client client, List<QuestRequirementPanel> reqPanels, BankItems bankItems)
 	{
 		reqPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
+	}
+
+	@Override
+	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
+	{
+
+	}
+
+	@Override
+	public void updateQuests(List<QuestHelper> questHelpers, boolean loggedOut, Map<QuestHelperQuest, QuestState> questStates)
+	{
+
 	}
 }

@@ -28,15 +28,20 @@
 package com.questhelper.panel.panels;
 
 import com.questhelper.QuestHelperPlugin;
+import com.questhelper.panel.QuestHelperPanel;
 import com.questhelper.panel.component.Updatable;
 import com.questhelper.panel.component.UpdatableRequirement;
+import javax.swing.JPanel;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public abstract class QuestPanel implements Updatable, UpdatableRequirement
+public abstract class QuestScreen extends JPanel implements Updatable, UpdatableRequirement
 {
 	@Getter(value = AccessLevel.PROTECTED)
 	private final QuestHelperPlugin plugin;
+
+	@Getter
+	private final QuestHelperPanel rootPanel;
 }

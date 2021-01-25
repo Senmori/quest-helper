@@ -24,34 +24,18 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.component;
+package com.questhelper.panel.panels;
 
-import com.questhelper.QuestHelperQuest;
-import com.questhelper.panel.panels.QuestScreen;
-import com.questhelper.questhelpers.QuestHelper;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.Nonnull;
-import net.runelite.api.Client;
-import net.runelite.api.QuestState;
-import net.runelite.client.callback.ClientThread;
+import java.awt.Dimension;
+import javax.swing.JPanel;
+import net.runelite.client.ui.PluginPanel;
 
-public interface Updatable
+public class FixedWidthPanel extends JPanel
 {
-	/**
-	 * This method is called every Game Tick.
-	 *
-	 * @param client the current client
-	 * @param clientThread the client thread to perform operations on
-	 */
-	void update(@Nonnull Client client, @Nonnull ClientThread clientThread);
+	@Override
+	public Dimension getPreferredSize()
+	{
+		return new Dimension(PluginPanel.PANEL_WIDTH, super.getPreferredSize().height);
+	}
 
-	/**
-	 * Update a container with the supplied quest list
-	 *
-	 * @param questHelpers the quests to filter/display.
-	 * @param loggedOut if the client is logged out
-	 * @param questStates the list of quests and their quest states
-	 */
-	default void updateQuests(List<QuestHelper> questHelpers, boolean loggedOut, Map<QuestHelperQuest, QuestState> questStates) {}
 }
