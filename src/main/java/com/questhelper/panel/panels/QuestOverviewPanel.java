@@ -1,36 +1,44 @@
 /*
- * Copyright (c) 2020, Zoinkwiz
- * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ *  * Copyright (c) 2021, Zoinkwiz
+ *  * All rights reserved.
+ *  *
+ *  * Redistribution and use in source and binary forms, with or without
+ *  * modification, are permitted provided that the following conditions are met:
+ *  *
+ *  * 1. Redistributions of source code must retain the above copyright notice, this
+ *  *    list of conditions and the following disclaimer.
+ *  * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *  *    this list of conditions and the following disclaimer in the documentation
+ *  *    and/or other materials provided with the distribution.
+ *  *
+ *  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ *  * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.questhelper.panel;
+package com.questhelper.panel.panels;
 
 import com.questhelper.BankItems;
 import com.questhelper.IconUtil;
 import com.questhelper.QuestHelperPlugin;
 
+import com.questhelper.QuestHelperQuest;
+import com.questhelper.panel.PanelDetails;
+import com.questhelper.panel.QuestHelperPanel;
+import com.questhelper.panel.TextUtil;
+import com.questhelper.panel.component.ActionsContainer;
+import com.questhelper.panel.component.QuestRequirementPanel;
+import com.questhelper.panel.component.QuestStepPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
-import com.questhelper.requirements.NoItemRequirement;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.QuestStep;
@@ -42,6 +50,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import javax.annotation.Nonnull;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -51,18 +61,23 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicButtonUI;
 import net.runelite.api.Client;
+import net.runelite.api.QuestState;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
 
-public class QuestOverviewPanel extends JPanel
+/**
+ *
+ */
+public class QuestOverviewPanel extends QuestScreen
 {
 	private final QuestHelperPlugin questHelperPlugin;
 	public QuestHelper currentQuest;
 
 	private final JPanel questStepsContainer = new JPanel();
-	private final JPanel actionsContainer = new JPanel();
+	private final ActionsContainer actionsContainer;
 
 	private final JPanel introPanel = new JPanel();
 	private final JLabel questOverviewNotes = new JLabel();
@@ -93,9 +108,17 @@ public class QuestOverviewPanel extends JPanel
 
 	private final List<QuestRequirementPanel> requirementPanels = new ArrayList<>();
 
-	public QuestOverviewPanel(QuestHelperPlugin questHelperPlugin)
+	static
 	{
-		super();
+		final BufferedImage closeImg = ImageUtil.getResourceStreamFromClass(QuestHelperPlugin.class, "/close.png");
+		final BufferedImage infoImg = ImageUtil.getResourceStreamFromClass(QuestHelperPlugin.class, "/info_icon.png");
+		CLOSE_ICON = new ImageIcon(closeImg);
+		INFO_ICON = new ImageIcon(infoImg);
+	}
+
+	public QuestOverviewPanel(QuestHelperPlugin questHelperPlugin, QuestHelperPanel rootPanel)
+	{
+		super(questHelperPlugin, rootPanel);
 		this.questHelperPlugin = questHelperPlugin;
 
 		BoxLayout boxLayout = new BoxLayout(this, BoxLayout.Y_AXIS);
@@ -103,33 +126,7 @@ public class QuestOverviewPanel extends JPanel
 		setBorder(new EmptyBorder(6, 6, 6, 6));
 
 		/* CONTROLS */
-		actionsContainer.setLayout(new BorderLayout());
-		actionsContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		actionsContainer.setPreferredSize(new Dimension(0, 30));
-		actionsContainer.setBorder(new EmptyBorder(5, 5, 5, 10));
-		actionsContainer.setVisible(false);
-
-		final JPanel viewControls = new JPanel(new GridLayout(1, 3, 10, 0));
-		viewControls.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-		JButton closeBtn = new JButton();
-		SwingUtil.removeButtonDecorations(closeBtn);
-		closeBtn.setIcon(CLOSE_ICON);
-		closeBtn.setToolTipText("Close helper");
-		closeBtn.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		closeBtn.setUI(new BasicButtonUI());
-		closeBtn.addActionListener(ev -> closeHelper());
-		viewControls.add(closeBtn);
-
-		actionsContainer.add(viewControls, BorderLayout.EAST);
-
-		questNameLabel.setForeground(Color.WHITE);
-		questNameLabel.setText("");
-		final JPanel leftTitleContainer = new JPanel(new BorderLayout(5, 0));
-		leftTitleContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		leftTitleContainer.add(questNameLabel, BorderLayout.CENTER);
-
-		actionsContainer.add(leftTitleContainer, BorderLayout.WEST);
+		actionsContainer = new ActionsContainer(ev -> closeHelper());
 
 		/* Quest overview panel */
 		introPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -210,7 +207,7 @@ public class QuestOverviewPanel extends JPanel
 
 		if (quest.getCurrentStep() != null)
 		{
-			questNameLabel.setText(quest.getQuest().getName());
+			actionsContainer.getQuestNameLabel().setText(quest.getQuest().getName());
 			actionsContainer.setVisible(true);
 
 			setupQuestRequirements(quest);
@@ -227,24 +224,9 @@ public class QuestOverviewPanel extends JPanel
 				}
 				questStepPanelList.add(newStep);
 				questStepsContainer.add(newStep);
-				newStep.addMouseListener(new MouseAdapter()
-				{
-					@Override
-					public void mouseClicked(MouseEvent e)
-					{
-						if (e.getButton() == MouseEvent.BUTTON1)
-						{
-							if (newStep.isCollapsed())
-							{
-								newStep.expand();
-							}
-							else
-							{
-								newStep.collapse();
-							}
-							updateCollapseText();
-						}
-					}
+				newStep.addMouseListener((panel, e) -> {
+					panel.update();
+					updateCollapseText();
 				});
 				repaint();
 				revalidate();
@@ -274,8 +256,8 @@ public class QuestOverviewPanel extends JPanel
 	{
 		questStepPanelList.forEach(panel -> {
 			boolean highlighted = false;
-			panel.setLockable(panel.panelDetails.getLockingQuestSteps() != null &&
-				(panel.panelDetails.getVars() == null || panel.panelDetails.getVars().contains(currentQuest.getVar())));
+			panel.setLockable(panel.getPanelDetails().getLockingQuestSteps() != null &&
+				(panel.getPanelDetails().getVars() == null || panel.getPanelDetails().getVars().contains(currentQuest.getVar())));
 			for (QuestStep step : panel.getSteps())
 			{
 				if (step == newStep || step.getSubsteps().contains(newStep))
@@ -442,7 +424,7 @@ public class QuestOverviewPanel extends JPanel
 				textCombat.append("<br>");
 			}
 		}
-		combatLabel.setText("<html><body style = 'text-align:left'>" + textCombat + "</body></html>");
+		combatLabel.setText(TextUtil.alignLeft(textCombat.toString()));
 
 		questCombatRequirementsListPanel.add(combatLabel);
 
@@ -458,7 +440,7 @@ public class QuestOverviewPanel extends JPanel
 				textNote.append(note);
 				textNote.append("<br><br>");
 			}
-			overviewLabel.setText("<html><body style = 'text-align:left'>" + textNote + "</body></html>");
+			overviewLabel.setText(TextUtil.alignLeft(textNote.toString()));
 
 			questOverviewNotesPanel.add(overviewLabel);
 			questOverviewNotesPanel.setVisible(true);
@@ -473,56 +455,27 @@ public class QuestOverviewPanel extends JPanel
 		}
 	}
 
-	@Override
-	public Dimension getPreferredSize()
-	{
-		return new Dimension(PluginPanel.PANEL_WIDTH, super.getPreferredSize().height);
-	}
-
 	public void updateRequirements(Client client, BankItems bankItems)
 	{
 		updateRequirementPanels(client, requirementPanels, bankItems);
-
-		for (QuestStepPanel questStepPanel : questStepPanelList)
-		{
-			questStepPanel.updateRequirements(client, bankItems, this);
-		}
+		questStepPanelList.forEach(panel -> panel.updateRequirements(client, bankItems));
 		revalidate();
 	}
 
 	public void updateRequirementPanels(Client client, List<QuestRequirementPanel> reqPanels, BankItems bankItems)
 	{
-		for (QuestRequirementPanel requirementPanel : reqPanels)
-		{
-			Color newColor;
+		reqPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
+	}
 
-			if (requirementPanel.getItemRequirement() instanceof ItemRequirement)
-			{
-				ItemRequirement itemRequirement = (ItemRequirement) requirementPanel.getItemRequirement();
-				if (itemRequirement instanceof NoItemRequirement)
-				{
-					newColor = itemRequirement.getColor(client); // explicitly call this because NoItemRequirement overrides it
-				}
-				else
-				{
-					newColor = itemRequirement.getColorConsideringBank(client, false, bankItems.getItems());
-				}
-			}
-			else
-			{
-				newColor = requirementPanel.getItemRequirement().getColor(client);
-			}
+	@Override
+	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
+	{
 
-			if (newColor == Color.WHITE)
-			{
-				requirementPanel.getLabel().setToolTipText("In bank");
-			}
-			else
-			{
-				requirementPanel.getLabel().setToolTipText("");
-			}
+	}
 
-			requirementPanel.getLabel().setForeground(newColor);
-		}
+	@Override
+	public void updateQuests(List<QuestHelper> questHelpers, boolean loggedOut, Map<QuestHelperQuest, QuestState> questStates)
+	{
+
 	}
 }

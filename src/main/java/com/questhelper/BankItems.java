@@ -25,6 +25,7 @@
 	*/
 package com.questhelper;
 
+import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Item;
@@ -33,6 +34,7 @@ public class BankItems
 {
 	@Getter
 	@Setter
+	@Nullable
 	Item[] items;
 
 	public BankItems()
