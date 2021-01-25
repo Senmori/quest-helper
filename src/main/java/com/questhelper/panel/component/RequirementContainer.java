@@ -29,7 +29,6 @@ import com.questhelper.BankItems;
 import com.questhelper.requirements.Requirement;
 import java.util.List;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import net.runelite.api.Client;
 
 public interface RequirementContainer
@@ -38,9 +37,9 @@ public interface RequirementContainer
 	 * Update this container's {@link Requirement}s.
 	 *
 	 * @param client the client who triggered the update
-	 * @param bankItems the client's bank items. Can be null.
+	 * @param bankItems the client's bank items.
 	 */
-	void updateRequirements(@Nonnull Client client, @Nullable BankItems bankItems);
+	void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems);
 
 	/**
 	 * @return a list of {@link Requirement}s attached to this container and/or it's children.

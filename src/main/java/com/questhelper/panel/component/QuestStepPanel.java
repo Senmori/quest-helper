@@ -39,7 +39,6 @@ import com.questhelper.steps.QuestStep;
 import java.util.List;
 import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
@@ -343,7 +342,7 @@ public class QuestStepPanel extends JPanel implements RequirementContainer
 	}
 
 	@Override
-	public void updateRequirements(@Nonnull Client client, @Nullable BankItems bankItems)
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
 		requirementPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
 	}

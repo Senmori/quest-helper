@@ -35,7 +35,6 @@ import java.awt.Dimension;
 import java.util.LinkedList;
 import java.util.List;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -81,7 +80,7 @@ public class QuestStepRequirementsPanel extends JPanel implements RequirementCon
 	}
 
 	@Override
-	public void updateRequirements(@Nonnull Client client, @Nullable BankItems bankItems)
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
 		requirementPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
 	}

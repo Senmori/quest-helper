@@ -39,7 +39,6 @@ import java.awt.image.BufferedImage;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -115,7 +114,7 @@ public class QuestRequirementPanel extends JPanel implements RequirementContaine
 	}
 
 	@Override
-	public void updateRequirements(@Nonnull Client client, @Nullable BankItems bankItems)
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
 		Color newColor = Color.RED;
 
@@ -126,7 +125,7 @@ public class QuestRequirementPanel extends JPanel implements RequirementContaine
 			{
 				newColor = itemRequirement.getColor(client); // explicitly call this because NoItemRequirement overrides it
 			}
-			else if (bankItems != null)
+			else
 			{
 				newColor = itemRequirement.getColorConsideringBank(client, false, bankItems.getItems());
 			}

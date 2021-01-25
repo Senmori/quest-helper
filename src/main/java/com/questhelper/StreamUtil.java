@@ -33,14 +33,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 
 public class StreamUtil
 {
+	@Nonnull
 	public static List<Requirement> getRequirements(Stream<? extends RequirementContainer> stream)
 	{
 		return stream.map(RequirementContainer::getRequirements).flatMap(Collection::stream).collect(Collectors.toList());
 	}
 
+	@Nonnull
 	public static List<Requirement> getRequirements(Collection< ? extends RequirementContainer> list)
 	{
 		return StreamUtil.getRequirements(list.stream());

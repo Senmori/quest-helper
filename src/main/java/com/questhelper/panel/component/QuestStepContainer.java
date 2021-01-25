@@ -40,6 +40,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import javax.annotation.Nonnull;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -148,11 +149,12 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 	}
 
 	@Override
-	public void updateRequirements(Client client, BankItems bankItems)
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
 		questStepPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
 	}
 
+	@Nonnull
 	@Override
 	public List<Requirement> getRequirements()
 	{
