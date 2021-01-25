@@ -45,6 +45,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -778,5 +782,29 @@ public class QuestHelperPlugin extends Plugin
 
 		log.debug("Loaded quest helper {}", clazz.getSimpleName());
 		return questHelper;
+	}
+
+	/**
+	 * Get the var of a quest while off the client thread.
+	 * <br>
+	 * This method swallows exceptions.
+	 *
+	 * @param quest the quest to query
+	 * @return the current var of the quest, or {@link Integer#MIN_VALUE} if there was a problem.
+	 */
+	public synchronized int getSafeQuestVar(QuestHelperQuest quest)
+	{
+		FutureTask<Integer> task = new FutureTask<>(() -> quest.getVar(client));
+		clientThread.invoke(task);
+		int var = Integer.MIN_VALUE;
+		try
+		{
+			var = task.get();
+		}
+		catch (InterruptedException | ExecutionException e)
+		{
+			//TODO: some kind of error logging
+		}
+		return var;
 	}
 }
