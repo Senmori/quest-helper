@@ -27,6 +27,7 @@ package com.questhelper.panel;
 import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
 
+import com.questhelper.panel.component.ActionsContainer;
 import com.questhelper.panel.component.QuestRequirementPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
@@ -36,9 +37,6 @@ import com.questhelper.steps.QuestStep;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,13 +47,11 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import javax.swing.plaf.basic.BasicButtonUI;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.SwingUtil;
 
 public class QuestOverviewPanel extends JPanel
 {
@@ -63,7 +59,7 @@ public class QuestOverviewPanel extends JPanel
 	public QuestHelper currentQuest;
 
 	private final JPanel questStepsContainer = new JPanel();
-	private final JPanel actionsContainer = new JPanel();
+	private final ActionsContainer actionsContainer;
 
 	private final JPanel introPanel = new JPanel();
 	private final JLabel questOverviewNotes = new JLabel();
@@ -112,33 +108,7 @@ public class QuestOverviewPanel extends JPanel
 		setBorder(new EmptyBorder(6, 6, 6, 6));
 
 		/* CONTROLS */
-		actionsContainer.setLayout(new BorderLayout());
-		actionsContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		actionsContainer.setPreferredSize(new Dimension(0, 30));
-		actionsContainer.setBorder(new EmptyBorder(5, 5, 5, 10));
-		actionsContainer.setVisible(false);
-
-		final JPanel viewControls = new JPanel(new GridLayout(1, 3, 10, 0));
-		viewControls.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-		JButton closeBtn = new JButton();
-		SwingUtil.removeButtonDecorations(closeBtn);
-		closeBtn.setIcon(CLOSE_ICON);
-		closeBtn.setToolTipText("Close helper");
-		closeBtn.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		closeBtn.setUI(new BasicButtonUI());
-		closeBtn.addActionListener(ev -> closeHelper());
-		viewControls.add(closeBtn);
-
-		actionsContainer.add(viewControls, BorderLayout.EAST);
-
-		questNameLabel.setForeground(Color.WHITE);
-		questNameLabel.setText("");
-		final JPanel leftTitleContainer = new JPanel(new BorderLayout(5, 0));
-		leftTitleContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		leftTitleContainer.add(questNameLabel, BorderLayout.CENTER);
-
-		actionsContainer.add(leftTitleContainer, BorderLayout.WEST);
+		actionsContainer = new ActionsContainer(ev -> closeHelper());
 
 		/* Quest overview panel */
 		introPanel.setBorder(BorderFactory.createCompoundBorder(
