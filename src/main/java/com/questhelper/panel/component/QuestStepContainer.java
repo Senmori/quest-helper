@@ -31,7 +31,6 @@ import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.StreamUtil;
 import com.questhelper.panel.PanelDetails;
-import com.questhelper.panel.QuestStepPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.QuestStep;

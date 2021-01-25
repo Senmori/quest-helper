@@ -28,6 +28,7 @@ import com.questhelper.BankItems;
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperQuest;
 import com.questhelper.panel.component.DiscordButton;
+import com.questhelper.panel.component.QuestSelectPanel;
 import com.questhelper.panel.component.SearchBar;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
@@ -70,7 +71,7 @@ public class QuestHelperPanel extends PluginPanel
 
 	private final ArrayList<QuestSelectPanel> questSelectPanels = new ArrayList<>();
 
-	QuestHelperPlugin questHelperPlugin;
+	private final QuestHelperPlugin questHelperPlugin;
 
 	private static final ImageIcon DISCORD_ICON;
 
@@ -105,8 +106,9 @@ public class QuestHelperPanel extends PluginPanel
 
 		JLabel questsCompletedLabel = new JLabel();
 		questsCompletedLabel.setForeground(Color.GRAY);
-		questsCompletedLabel.setText("<html><body style='text-align:left'>Please log in to see available quests" +
-			". Note that not all quests are available in the Quest Helper yet.</body></html>");
+		questsCompletedLabel.setText(TextUtil.alignLeft(
+			"Please log in to see available quests." +
+				"Note that not all quests are available in the Quest Helper yet"));
 
 		allQuestsCompletedPanel.setLayout(new BorderLayout());
 		allQuestsCompletedPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
@@ -265,11 +267,11 @@ public class QuestHelperPanel extends PluginPanel
 			noMatch.setForeground(Color.GRAY);
 			if (loggedOut)
 			{
-				noMatch.setText("<html><body style='text-align:left'>Log in to see available quests</body></html>");
+				noMatch.setText(TextUtil.alignLeft("Log in to see available quests"));
 			}
 			else
 			{
-				noMatch.setText("<html><body style='text-align:left'>No quests are available that match your current filters</body></html>");
+				noMatch.setText(TextUtil.alignLeft("No quests are available that match your current filters"));
 			}
 			allQuestsCompletedPanel.add(noMatch);
 		}

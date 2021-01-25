@@ -29,6 +29,7 @@ import com.questhelper.QuestHelperPlugin;
 
 import com.questhelper.panel.component.ActionsContainer;
 import com.questhelper.panel.component.QuestRequirementPanel;
+import com.questhelper.panel.component.QuestStepPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
 import com.questhelper.requirements.Requirement;
@@ -406,7 +407,7 @@ public class QuestOverviewPanel extends JPanel
 				textCombat.append("<br>");
 			}
 		}
-		combatLabel.setText("<html><body style = 'text-align:left'>" + textCombat + "</body></html>");
+		combatLabel.setText(TextUtil.alignLeft(textCombat.toString()));
 
 		questCombatRequirementsListPanel.add(combatLabel);
 
@@ -422,7 +423,7 @@ public class QuestOverviewPanel extends JPanel
 				textNote.append(note);
 				textNote.append("<br><br>");
 			}
-			overviewLabel.setText("<html><body style = 'text-align:left'>" + textNote + "</body></html>");
+			overviewLabel.setText(TextUtil.alignLeft(textNote.toString()));
 
 			questOverviewNotesPanel.add(overviewLabel);
 			questOverviewNotesPanel.setVisible(true);
