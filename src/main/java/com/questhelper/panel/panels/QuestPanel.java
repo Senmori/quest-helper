@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,18 +24,19 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.component;
 
-import com.questhelper.requirements.Requirement;
-import java.util.List;
-import javax.annotation.Nonnull;
+package com.questhelper.panel.panels;
 
-public interface RequirementContainer extends UpdatableRequirement
+import com.questhelper.QuestHelperPlugin;
+import com.questhelper.panel.component.Updatable;
+import com.questhelper.panel.component.UpdatableRequirement;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public abstract class QuestPanel implements Updatable, UpdatableRequirement
 {
-	/**
-	 * @return a list of {@link Requirement}s attached to this container and/or it's children.
-	 * 			If there are no {@link Requirement}s, the list will be empty, but not null.
-	 */
-	@Nonnull
-	List<Requirement> getRequirements();
+	@Getter(value = AccessLevel.PROTECTED)
+	private final QuestHelperPlugin plugin;
 }

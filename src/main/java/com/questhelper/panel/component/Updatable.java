@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -25,16 +26,11 @@
  */
 package com.questhelper.panel.component;
 
-import com.questhelper.requirements.Requirement;
-import java.util.List;
 import javax.annotation.Nonnull;
+import net.runelite.api.Client;
+import net.runelite.client.callback.ClientThread;
 
-public interface RequirementContainer extends UpdatableRequirement
+public interface Updatable
 {
-	/**
-	 * @return a list of {@link Requirement}s attached to this container and/or it's children.
-	 * 			If there are no {@link Requirement}s, the list will be empty, but not null.
-	 */
-	@Nonnull
-	List<Requirement> getRequirements();
+	void update(@Nonnull Client client, @Nonnull ClientThread clientThread);
 }

@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,18 +24,31 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.component;
 
-import com.questhelper.requirements.Requirement;
-import java.util.List;
+package com.questhelper.panel.panels;
+
+import com.questhelper.BankItems;
+import com.questhelper.QuestHelperPlugin;
 import javax.annotation.Nonnull;
+import net.runelite.api.Client;
+import net.runelite.client.callback.ClientThread;
 
-public interface RequirementContainer extends UpdatableRequirement
+public class SearchPanel extends QuestPanel
 {
-	/**
-	 * @return a list of {@link Requirement}s attached to this container and/or it's children.
-	 * 			If there are no {@link Requirement}s, the list will be empty, but not null.
-	 */
-	@Nonnull
-	List<Requirement> getRequirements();
+	public SearchPanel(QuestHelperPlugin plugin)
+	{
+		super(plugin);
+	}
+
+	@Override
+	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
+	{
+
+	}
+
+	@Override
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
+	{
+
+	}
 }

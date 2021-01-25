@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,18 +24,21 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
 package com.questhelper.panel.component;
 
+import com.questhelper.BankItems;
 import com.questhelper.requirements.Requirement;
-import java.util.List;
 import javax.annotation.Nonnull;
+import net.runelite.api.Client;
 
-public interface RequirementContainer extends UpdatableRequirement
+public interface UpdatableRequirement
 {
 	/**
-	 * @return a list of {@link Requirement}s attached to this container and/or it's children.
-	 * 			If there are no {@link Requirement}s, the list will be empty, but not null.
+	 * Update this container's {@link Requirement}s.
+	 *
+	 * @param client the client who triggered the update
+	 * @param bankItems the client's bank items.
 	 */
-	@Nonnull
-	List<Requirement> getRequirements();
+	void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems);
 }
