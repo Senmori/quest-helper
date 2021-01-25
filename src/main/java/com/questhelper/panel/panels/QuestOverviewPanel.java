@@ -48,6 +48,7 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,14 +60,12 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import javax.swing.plaf.basic.BasicButtonUI;
 import net.runelite.api.Client;
 import net.runelite.api.QuestState;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.SwingUtil;
 
 /**
  *

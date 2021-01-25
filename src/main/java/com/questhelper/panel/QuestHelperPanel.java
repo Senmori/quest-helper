@@ -55,7 +55,10 @@ public class QuestHelperPanel extends PluginPanel implements Updatable, Updatabl
 	private final QuestHelperPlugin questHelperPlugin;
 
 	private static final ImageIcon DISCORD_ICON;
+	private QuestScreen currentScreen;
+	private final QuestSearchScreen questSearchScreen;
 
+	private final QuestHelperPlugin questHelperPlugin;
 	static
 	{
 		DISCORD_ICON = IconUtil.DISCORD.getIcon(img -> ImageUtil.resizeImage(img, 16, 16));
@@ -95,6 +98,36 @@ public class QuestHelperPanel extends PluginPanel implements Updatable, Updatabl
 		}
 		return false;
 	}
+	/**
+	 * Updates this panel with the currently active screen.<br>
+	 * If 'null' is provided, the default quest search screen will be displayed.
+	 * @param screen the new screen
+	 * @return true if the screen was changed.
+	 */
+	public final boolean setActiveScreen(QuestScreen screen)
+	{
+		if (screen != null && screen != currentScreen)
+		{
+			questHelperPlugin.getEventBus().register(screen);
+			questHelperPlugin.getEventBus().unregister(currentScreen);
+			this.currentScreen = screen;
+			return true;
+		}
+		if (screen == null && currentScreen != questSearchScreen)
+		{
+			questHelperPlugin.getEventBus().register(questSearchScreen);
+			questHelperPlugin.getEventBus().unregister(currentScreen);
+			this.currentScreen = questSearchScreen;
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
+	{
+		questSearchScreen.update(client, clientThread);
+	}
 
 	@Override
 	public void update(@Nonnull Client client, @Nonnull ClientThread clientThread)
@@ -107,6 +140,16 @@ public class QuestHelperPanel extends PluginPanel implements Updatable, Updatabl
 		questSelectPanels.forEach(questListPanel::remove);
 		questSelectPanels.clear();
 
+	@Override
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
+	{
+		questSearchScreen.updateRequirements(client, bankItems);
+	}
+
+	@Override
+	public void updateQuests(List<QuestHelper> questHelpers, boolean loggedOut, Map<QuestHelperQuest, QuestState> completedQuests)
+	{
+		questSearchScreen.updateQuests(questHelpers, loggedOut, completedQuests);
 	@Override
 	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
