@@ -27,6 +27,8 @@ package com.questhelper.panel;
 import com.questhelper.BankItems;
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperQuest;
+import com.questhelper.panel.component.DiscordButton;
+import com.questhelper.panel.component.SearchBar;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import java.awt.*;
@@ -36,24 +38,16 @@ import java.util.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.extern.slf4j.Slf4j;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.steps.QuestStep;
 import net.runelite.api.Client;
 import net.runelite.api.QuestState;
-import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
-import net.runelite.client.ui.components.ComboBoxListRenderer;
 import net.runelite.client.ui.components.IconTextField;
 import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.LinkBrowser;
-import net.runelite.client.util.SwingUtil;
 import net.runelite.client.util.Text;
 
 @Slf4j
@@ -67,7 +61,7 @@ public class QuestHelperPanel extends PluginPanel
 	private final JPanel allDropdownSections = new JPanel();
 	private final JComboBox<Enum> filterDropdown, difficultyDropdown, orderDropdown;
 
-	private final IconTextField searchBar = new IconTextField();
+	private final IconTextField searchBar;
 	private final FixedWidthPanel questListPanel = new FixedWidthPanel();
 	private final FixedWidthPanel questListWrapper = new FixedWidthPanel();
 	private final JScrollPane scrollableContainer;
@@ -106,25 +100,7 @@ public class QuestHelperPanel extends PluginPanel
 		title.setForeground(Color.WHITE);
 		titlePanel.add(title, BorderLayout.WEST);
 
-		JButton discordBtn = new JButton();
-		SwingUtil.removeButtonDecorations(discordBtn);
-		discordBtn.setIcon(DISCORD_ICON);
-		discordBtn.setToolTipText("Get help with the Quest Helper or make suggestions on Discord");
-		discordBtn.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		discordBtn.setUI(new BasicButtonUI());
-		discordBtn.addActionListener((ev) -> LinkBrowser.browse("https://discord.gg/XCfwNnz6RB"));
-		discordBtn.addMouseListener(new java.awt.event.MouseAdapter()
-		{
-			public void mouseEntered(java.awt.event.MouseEvent evt)
-			{
-				discordBtn.setBackground(ColorScheme.DARK_GRAY_HOVER_COLOR);
-			}
-
-			public void mouseExited(java.awt.event.MouseEvent evt)
-			{
-				discordBtn.setBackground(ColorScheme.DARK_GRAY_COLOR);
-			}
-		});
+		DiscordButton discordBtn = new DiscordButton(DISCORD_ICON);
 		titlePanel.add(discordBtn, BorderLayout.EAST);
 
 		JLabel questsCompletedLabel = new JLabel();
@@ -138,30 +114,7 @@ public class QuestHelperPanel extends PluginPanel
 		allQuestsCompletedPanel.setVisible(false);
 
 		/* Search bar */
-		searchBar.setIcon(IconTextField.Icon.SEARCH);
-		searchBar.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 20, 30));
-		searchBar.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		searchBar.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
-		searchBar.getDocument().addDocumentListener(new DocumentListener()
-		{
-			@Override
-			public void insertUpdate(DocumentEvent e)
-			{
-				onSearchBarChanged();
-			}
-
-			@Override
-			public void removeUpdate(DocumentEvent e)
-			{
-				onSearchBarChanged();
-			}
-
-			@Override
-			public void changedUpdate(DocumentEvent e)
-			{
-				onSearchBarChanged();
-			}
-		});
+		searchBar = SearchBar.createSearchBar(IconTextField.Icon.SEARCH, s -> onSearchBarChanged());
 
 		JPanel searchQuestsPanel = new JPanel();
 		searchQuestsPanel.setBorder(new EmptyBorder(10, 10, 10, 10));

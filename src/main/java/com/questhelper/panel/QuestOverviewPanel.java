@@ -27,9 +27,9 @@ package com.questhelper.panel;
 import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
 
+import com.questhelper.panel.component.QuestRequirementPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
-import com.questhelper.requirements.NoItemRequirement;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.QuestStep;
@@ -236,24 +236,9 @@ public class QuestOverviewPanel extends JPanel
 				}
 				questStepPanelList.add(newStep);
 				questStepsContainer.add(newStep);
-				newStep.addMouseListener(new MouseAdapter()
-				{
-					@Override
-					public void mouseClicked(MouseEvent e)
-					{
-						if (e.getButton() == MouseEvent.BUTTON1)
-						{
-							if (newStep.isCollapsed())
-							{
-								newStep.expand();
-							}
-							else
-							{
-								newStep.collapse();
-							}
-							updateCollapseText();
-						}
-					}
+				newStep.addMouseListener((panel, e) -> {
+					panel.update();
+					updateCollapseText();
 				});
 				repaint();
 				revalidate();
@@ -283,8 +268,8 @@ public class QuestOverviewPanel extends JPanel
 	{
 		questStepPanelList.forEach(panel -> {
 			boolean highlighted = false;
-			panel.setLockable(panel.panelDetails.getLockingQuestSteps() != null &&
-				(panel.panelDetails.getVars() == null || panel.panelDetails.getVars().contains(currentQuest.getVar())));
+			panel.setLockable(panel.getPanelDetails().getLockingQuestSteps() != null &&
+				(panel.getPanelDetails().getVars() == null || panel.getPanelDetails().getVars().contains(currentQuest.getVar())));
 			for (QuestStep step : panel.getSteps())
 			{
 				if (step == newStep || step.getSubsteps().contains(newStep))
@@ -491,47 +476,12 @@ public class QuestOverviewPanel extends JPanel
 	public void updateRequirements(Client client, BankItems bankItems)
 	{
 		updateRequirementPanels(client, requirementPanels, bankItems);
-
-		for (QuestStepPanel questStepPanel : questStepPanelList)
-		{
-			questStepPanel.updateRequirements(client, bankItems, this);
-		}
+		questStepPanelList.forEach(panel -> panel.updateRequirements(client, bankItems));
 		revalidate();
 	}
 
 	public void updateRequirementPanels(Client client, List<QuestRequirementPanel> reqPanels, BankItems bankItems)
 	{
-		for (QuestRequirementPanel requirementPanel : reqPanels)
-		{
-			Color newColor;
-
-			if (requirementPanel.getItemRequirement() instanceof ItemRequirement)
-			{
-				ItemRequirement itemRequirement = (ItemRequirement) requirementPanel.getItemRequirement();
-				if (itemRequirement instanceof NoItemRequirement)
-				{
-					newColor = itemRequirement.getColor(client); // explicitly call this because NoItemRequirement overrides it
-				}
-				else
-				{
-					newColor = itemRequirement.getColorConsideringBank(client, false, bankItems.getItems());
-				}
-			}
-			else
-			{
-				newColor = requirementPanel.getItemRequirement().getColor(client);
-			}
-
-			if (newColor == Color.WHITE)
-			{
-				requirementPanel.getLabel().setToolTipText("In bank");
-			}
-			else
-			{
-				requirementPanel.getLabel().setToolTipText("");
-			}
-
-			requirementPanel.getLabel().setForeground(newColor);
-		}
+		reqPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
 	}
 }
