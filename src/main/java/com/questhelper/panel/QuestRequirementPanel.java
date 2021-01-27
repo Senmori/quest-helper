@@ -24,13 +24,18 @@
  */
 package com.questhelper.panel;
 
+import com.questhelper.BankItems;
 import com.questhelper.IconUtil;
 import com.questhelper.requirements.ItemRequirement;
 import com.questhelper.requirements.Requirement;
+import com.questhelper.requirements.RequirementContainer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Insets;
+import java.util.Collections;
+import java.util.List;
+import javax.annotation.Nonnull;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -38,8 +43,9 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Client;
 
-public class QuestRequirementPanel extends JPanel
+public class QuestRequirementPanel extends JPanel implements RequirementContainer
 {
 	private static final ImageIcon INFO_ICON = IconUtil.INFO_ICON.getIcon();
 
@@ -95,6 +101,19 @@ public class QuestRequirementPanel extends JPanel
 		b.setContentAreaFilled(false);
 		b.setMargin(new Insets(0, 0, 0, 0));
 		add(b);
+	}
+
+	@Nonnull
+	@Override
+	public List<Requirement> getRequirements()
+	{
+		return Collections.singletonList(requirement);
+	}
+
+	@Override
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
+	{
+
 	}
 }
 

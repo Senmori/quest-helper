@@ -33,18 +33,22 @@ import com.google.inject.CreationException;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.questhelper.questhelpers.Quest;
 import com.questhelper.banktab.QuestBankTab;
 import com.questhelper.banktab.QuestHelperBankTagService;
+import com.questhelper.panel.QuestHelperPanel;
+import com.questhelper.questhelpers.Quest;
+import com.questhelper.questhelpers.QuestHelper;
+import com.questhelper.steps.QuestStep;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -80,9 +84,6 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import com.questhelper.panel.QuestHelperPanel;
-import com.questhelper.questhelpers.QuestHelper;
-import com.questhelper.steps.QuestStep;
 import net.runelite.client.plugins.bank.BankSearch;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
@@ -777,5 +778,30 @@ public class QuestHelperPlugin extends Plugin
 
 		log.debug("Loaded quest helper {}", clazz.getSimpleName());
 		return questHelper;
+	}
+
+
+	/**
+	 * Get the var of a quest while off the client thread.
+	 * <br>
+	 * This method swallows exceptions.
+	 *
+	 * @param quest the quest to query
+	 * @return the current var of the quest, or {@link Integer#MIN_VALUE} if there was a problem.
+	 */
+	public synchronized int getSafeQuestVar(QuestHelperQuest quest)
+	{
+		FutureTask<Integer> task = new FutureTask<>(() -> quest.getVar(client));
+		clientThread.invoke(task);
+		int var = Integer.MIN_VALUE;
+		try
+		{
+			var = task.get();
+		}
+		catch (InterruptedException | ExecutionException e)
+		{
+			log.error("Error retrieving quest state for Quest " + quest.getName() + ".", e);
+		}
+		return var;
 	}
 }

@@ -27,7 +27,6 @@ package com.questhelper.panel;
 import com.questhelper.BankItems;
 import com.questhelper.IconUtil;
 import com.questhelper.QuestHelperPlugin;
-
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
 import com.questhelper.requirements.NoItemRequirement;
@@ -274,8 +273,8 @@ public class QuestOverviewPanel extends JPanel
 	{
 		questStepPanelList.forEach(panel -> {
 			boolean highlighted = false;
-			panel.setLockable(panel.panelDetails.getLockingQuestSteps() != null &&
-				(panel.panelDetails.getVars() == null || panel.panelDetails.getVars().contains(currentQuest.getVar())));
+			panel.setLockable(panel.getPanelDetails().getLockingQuestSteps() != null &&
+				(panel.getPanelDetails().getVars() == null || panel.getPanelDetails().getVars().contains(currentQuest.getVar())));
 			for (QuestStep step : panel.getSteps())
 			{
 				if (step == newStep || step.getSubsteps().contains(newStep))
@@ -483,10 +482,7 @@ public class QuestOverviewPanel extends JPanel
 	{
 		updateRequirementPanels(client, requirementPanels, bankItems);
 
-		for (QuestStepPanel questStepPanel : questStepPanelList)
-		{
-			questStepPanel.updateRequirements(client, bankItems, this);
-		}
+		questStepPanelList.forEach(panel -> panel.updateRequirements(client, bankItems));
 		revalidate();
 	}
 
