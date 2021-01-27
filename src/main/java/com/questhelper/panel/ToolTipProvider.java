@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,64 +24,12 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+package com.questhelper.panel;
 
-package com.questhelper.questhelpers;
-
-import com.questhelper.panel.ToolTipProvider;
-import java.util.Locale;
-import java.util.function.Predicate;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang3.StringUtils;
 
-public interface Quest
+public interface ToolTipProvider
 {
-	public static boolean showCompletedQuests(QuestHelper quest)
-	{
-		return quest.getConfig().showCompletedQuests() && quest.isCompleted() || !quest.isCompleted();
-	}
-
-	/**
-	 * Describes the difficulty of a {@link com.questhelper.QuestHelperQuest}
-	 */
-	public enum Difficulty implements Predicate<QuestHelper>, ToolTipProvider
-	{
-		ALL,
-		NOVICE,
-		INTERMEDIATE,
-		EXPERIENCED,
-		MASTER,
-		GRANDMASTER,
-		MINIQUEST,
-		;
-
-		@Override
-		public boolean test(QuestHelper quest) {
-			return quest.getQuest().getDifficulty() == this || this == ALL;
-		}
-
-		@Nonnull
-		@Override
-		public String getTooltip()
-		{
-			return "Show " + StringUtils.capitalize(name().toLowerCase(Locale.ROOT)) + " quests.";
-		}
-	}
-
-	/**
-	 * Describes if the quest is free-to-play (F2P), pay-to-play(P2P),
-	 * or a miniquest.
-	 */
-	public enum Type implements Predicate<QuestHelper>
-	{
-		F2P,
-		P2P,
-		MINIQUEST,
-		;
-
-		@Override
-		public boolean test(QuestHelper quest)
-		{
-			return quest.getQuest().getQuestType() == this;
-		}
-	}
+	@Nonnull
+	String getTooltip();
 }

@@ -24,6 +24,7 @@
  */
 package com.questhelper;
 
+import com.questhelper.panel.ToolTipProvider;
 import com.questhelper.panel.questorders.QuestOrders;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
@@ -33,6 +34,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -41,21 +43,23 @@ import net.runelite.client.config.ConfigSection;
 @ConfigGroup("questhelper")
 public interface QuestHelperConfig extends Config
 {
-	enum QuestOrdering implements Comparator<QuestHelper>
+	enum QuestOrdering implements Comparator<QuestHelper>, ToolTipProvider
 	{
 		/** Sort quests in alphabetical order */
-		A_TO_Z(QuestOrders.sortAToZ()),
+		A_TO_Z(QuestOrders.sortAToZ(), "Sort in alphabetical order."),
 		/** Sort quests in reverse alphabetical order */
-		Z_TO_A(QuestOrders.sortZToA()),
+		Z_TO_A(QuestOrders.sortZToA(), "Sort in reverse alphabetical order."),
 		/** Sort quests according to the Optimal Quest Guide (https://oldschool.runescape.wiki/w/Optimal_quest_guide) */
-		OPTIMAL(QuestOrders.sortOptimalOrder()),
+		OPTIMAL(QuestOrders.sortOptimalOrder(), "Sort according to the Optimal Quest Guide."),
 		;
 
 		private final Comparator<QuestHelper> comparator;
-		QuestOrdering(Comparator<QuestHelper> comparator) {
+		private final String tooltip;
+		QuestOrdering(Comparator<QuestHelper> comparator, String tooltip)
+		{
 			this.comparator = comparator;
+			this.tooltip = tooltip == null ? "" : tooltip;
 		}
-
 		public List<QuestHelper> sort(Collection<QuestHelper> list) {
 			return list.stream().sorted(this).collect(Collectors.toList());
 		}
@@ -65,26 +69,35 @@ public interface QuestHelperConfig extends Config
 		{
 			return comparator.compare(o1, o2);
 		}
+
+		@Nonnull
+		@Override
+		public String getTooltip()
+		{
+			return tooltip;
+		}
 	}
 
-	enum QuestFilter implements Predicate<QuestHelper>
+	enum QuestFilter implements Predicate<QuestHelper>, ToolTipProvider
 	{
 		/** Show all quests */
-		SHOW_ALL(q -> true),
+		SHOW_ALL(q -> true, "Show all quests."),
 		/** Show quests where the client meets the quest requirements */
-		SHOW_MEETS_REQS(QuestHelper::clientMeetsRequirements),
+		SHOW_MEETS_REQS(QuestHelper::clientMeetsRequirements, "Show all quests that you meet the requirements for."),
 		/** Show all free-to-play quests */
-		FREE_TO_PLAY(Quest.Type.F2P),
+		FREE_TO_PLAY(Quest.Type.F2P, "Show all Free To Play quests."),
 		/** Show all members' quests */
-		MEMBERS(Quest.Type.P2P),
+		MEMBERS(Quest.Type.P2P, "Show all members' quests."),
 		/** Show all miniquests (all miniquests are members' only) */
-		MINIQUEST(Quest.Type.MINIQUEST),
+		MINIQUEST(Quest.Type.MINIQUEST, "Show all miniquests."),
 		;
 
 		private final Predicate<QuestHelper> predicate;
+		private final String tooltip;
 
-		QuestFilter(Predicate<QuestHelper> predicate) {
+		QuestFilter(Predicate<QuestHelper> predicate, String tooltip) {
 			this.predicate = predicate;
+			this.tooltip = tooltip == null ? "" : tooltip;
 		}
 
 		@Override
@@ -95,6 +108,13 @@ public interface QuestHelperConfig extends Config
 		public List<QuestHelper> test(Collection<QuestHelper> helpers) {
 
 			return helpers.stream().filter(this).collect(Collectors.toList());
+		}
+
+		@Nonnull
+		@Override
+		public String getTooltip()
+		{
+			return tooltip;
 		}
 	}
 
