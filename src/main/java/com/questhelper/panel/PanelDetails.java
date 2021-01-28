@@ -26,16 +26,16 @@ package com.questhelper.panel;
 
 import com.questhelper.questhelpers.QuestUtil;
 import com.questhelper.requirements.Requirement;
+import com.questhelper.steps.QuestStep;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import lombok.Getter;
-import com.questhelper.steps.QuestStep;
 
 public class PanelDetails
 {
 	@Getter
-	String header;
+	private final String header;
 
 	@Getter
 	private final List<QuestStep> steps;

@@ -76,7 +76,6 @@ public class SearchPanel extends JPanel
 		allQuestsCompletedPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 		allQuestsCompletedPanel.add(questsCompletedLabel);
 		allQuestsCompletedPanel.setVisible(false);
-
 		searchBar = PanelUtil.createSearchBar(IconTextField.Icon.SEARCH, onSearchBarChanged);
 
 		add(searchBar, BorderLayout.CENTER);
@@ -117,12 +116,5 @@ public class SearchPanel extends JPanel
 	public void setText(String text)
 	{
 		searchBar.setText(text);
-	}
-
-	public void updateDropdownLists(QuestHelperConfig config)
-	{
-		getFilterDropdown().setSelectedItem(config.filterListBy());
-		getDifficultyDropdown().setSelectedItem(config.difficulty());
-		getOrderDropdown().setSelectedItem(config.orderListBy());
 	}
 }

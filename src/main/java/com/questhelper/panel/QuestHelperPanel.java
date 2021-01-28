@@ -41,8 +41,6 @@ import java.util.Map;
 import java.util.Set;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -61,9 +59,6 @@ public class QuestHelperPanel extends PluginPanel
 
 	private final IconTextField searchBar = new IconTextField();
 	private final FixedWidthPanel questListPanel = new FixedWidthPanel();
-	private final FixedWidthPanel questListWrapper = new FixedWidthPanel();
-	private final JScrollPane scrollableContainer;
-	private final int DROPDOWN_HEIGHT = 20;
 
 
 	// panels to start a quest
@@ -73,6 +68,7 @@ public class QuestHelperPanel extends PluginPanel
 
 	// ui-upgrade fields
 	private final SearchPanel searchPanel;
+	private final ActiveContainer activeContainer = new ActiveContainer();
 
 	public QuestHelperPanel(QuestHelperPlugin questHelperPlugin)
 	{
@@ -85,19 +81,12 @@ public class QuestHelperPanel extends PluginPanel
 
 		/* Setup overview panel */
 		TitlePanel titlePanel = new TitlePanel("Quest Helper");
-		searchPanel = new SearchPanel(questHelperPlugin, txt -> onSearchBarChanged());
+		searchPanel = new SearchPanel(questHelperPlugin, field -> onSearchBarChanged());
 
 		// Quest List
 		questListPanel.setBorder(new EmptyBorder(8, 10, 0, 10));
 		questListPanel.setLayout(new DynamicGridLayout(0, 1, 0, 5));
 		questListPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		showMatchingQuests("");
-
-		questListWrapper.setLayout(new BorderLayout());
-		questListWrapper.add(questListPanel, BorderLayout.NORTH);
-
-		scrollableContainer = new JScrollPane(questListWrapper);
-		scrollableContainer.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
 		JPanel introDetailsPanel = new JPanel();
 		introDetailsPanel.setLayout(new BorderLayout());
@@ -105,13 +94,18 @@ public class QuestHelperPanel extends PluginPanel
 		introDetailsPanel.add(searchPanel, BorderLayout.CENTER);
 
 		add(introDetailsPanel, BorderLayout.NORTH);
-		add(scrollableContainer, BorderLayout.CENTER);
+		add(activeContainer, BorderLayout.CENTER);
 
 		/* Layout */
 		questOverviewPanel = new QuestOverviewPanel(questHelperPlugin);
 
-		questOverviewWrapper.setLayout(new BorderLayout());
-		questOverviewWrapper.add(questOverviewPanel, BorderLayout.NORTH);
+		setActiveDisplay(questListPanel);
+		showMatchingQuests("");
+	}
+
+	private void setActiveDisplay(Component component)
+	{
+		activeContainer.setViewportView(component);
 	}
 
 	private void onSearchBarChanged()
@@ -120,13 +114,13 @@ public class QuestHelperPanel extends PluginPanel
 
 		if ((questOverviewPanel.currentQuest == null || !text.isEmpty()))
 		{
-			scrollableContainer.setViewportView(questListWrapper);
+			setActiveDisplay(questListPanel);
 			questSelectPanels.forEach(questListPanel::remove);
 			showMatchingQuests(text);
 		}
 		else
 		{
-			scrollableContainer.setViewportView(questOverviewWrapper);
+			setActiveDisplay(questOverviewPanel);
 		}
 		revalidate();
 	}
@@ -194,7 +188,7 @@ public class QuestHelperPanel extends PluginPanel
 	public void addQuest(QuestHelper quest, boolean isActive)
 	{
 		searchPanel.getAllDropdownSections().setVisible(false);
-		scrollableContainer.setViewportView(questOverviewWrapper);
+		setActiveDisplay(questOverviewPanel);
 
 		questOverviewPanel.addQuest(quest, isActive);
 
@@ -226,7 +220,7 @@ public class QuestHelperPanel extends PluginPanel
 	public void removeQuest()
 	{
 		searchPanel.getAllDropdownSections().setVisible(true);
-		scrollableContainer.setViewportView(questListWrapper);
+		setActiveDisplay(questListPanel);
 		questOverviewPanel.removeQuest();
 
 		repaint();
