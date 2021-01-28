@@ -30,6 +30,7 @@ import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.StreamUtil;
 import com.questhelper.panel.PanelDetails;
+import com.questhelper.panel.QuestHelperPanel;
 import com.questhelper.panel.QuestStepPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.Requirement;
@@ -54,11 +55,13 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 	private final List<QuestStepPanel> questStepPanels = new LinkedList<>();
 
 	private final QuestHelperPlugin plugin;
+	private final QuestHelperPanel rootPanel;
 
-	public QuestStepContainer(QuestHelperPlugin plugin)
+	public QuestStepContainer(QuestHelperPlugin plugin, QuestHelperPanel rootPanel)
 	{
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		this.plugin = plugin;
+		this.rootPanel = rootPanel;
 	}
 
 	public void initQuestSteps(QuestHelper currentQuest, QuestStep currentStep, Container parent, BiConsumer<QuestStepPanel, MouseEvent> mouseListener)
@@ -68,7 +71,7 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 		{
 			QuestStepPanel newStep = new QuestStepPanel(panel, currentStep);
 			boolean hasLockingSteps = panel.getLockingQuestSteps() != null;
-			int var = plugin.getSafeQuestVar(currentQuest.getQuest()); // thread-safe even if we're not on the client thread
+			int var = rootPanel.getSafeQuestVar(currentQuest.getQuest()); // thread-safe even if we're not on the client thread
 			boolean hasVars = panel.getVars() == null || panel.getVars().contains(var);
 			if (hasLockingSteps && hasVars)
 			{

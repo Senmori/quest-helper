@@ -27,6 +27,7 @@ package com.questhelper.panel;
 import com.questhelper.BankItems;
 import com.questhelper.IconUtil;
 import com.questhelper.QuestHelperPlugin;
+import com.questhelper.panel.screen.QuestScreen;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
 import com.questhelper.requirements.NoItemRequirement;
@@ -37,8 +38,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -55,7 +54,7 @@ import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.SwingUtil;
 
-public class QuestOverviewPanel extends JPanel
+public class QuestOverviewPanel extends QuestScreen
 {
 	private final QuestHelperPlugin questHelperPlugin;
 	public QuestHelper currentQuest;
@@ -92,10 +91,10 @@ public class QuestOverviewPanel extends JPanel
 
 	private final List<QuestRequirementPanel> requirementPanels = new ArrayList<>();
 
-	public QuestOverviewPanel(QuestHelperPlugin questHelperPlugin)
+	public QuestOverviewPanel(QuestHelperPlugin plugin, QuestHelperPanel rootPanel)
 	{
-		super();
-		this.questHelperPlugin = questHelperPlugin;
+		super(plugin, rootPanel);
+		this.questHelperPlugin = plugin;
 
 		BoxLayout boxLayout = new BoxLayout(this, BoxLayout.Y_AXIS);
 		setLayout(boxLayout);
@@ -226,24 +225,9 @@ public class QuestOverviewPanel extends JPanel
 				}
 				questStepPanelList.add(newStep);
 				questStepsContainer.add(newStep);
-				newStep.addMouseListener(new MouseAdapter()
-				{
-					@Override
-					public void mouseClicked(MouseEvent e)
-					{
-						if (e.getButton() == MouseEvent.BUTTON1)
-						{
-							if (newStep.isCollapsed())
-							{
-								newStep.expand();
-							}
-							else
-							{
-								newStep.collapse();
-							}
-							updateCollapseText();
-						}
-					}
+				newStep.addMouseListener((p, e) -> {
+					newStep.update();
+					updateCollapseText();
 				});
 				repaint();
 				revalidate();

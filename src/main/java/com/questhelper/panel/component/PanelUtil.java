@@ -32,13 +32,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 import static net.runelite.client.ui.PluginPanel.PANEL_WIDTH;
@@ -46,33 +43,13 @@ import net.runelite.client.ui.components.IconTextField;
 
 public class PanelUtil
 {
-	public static IconTextField createSearchBar(IconTextField.Icon icon, Consumer<IconTextField> updateConsumer)
+	public static IconTextField createSearchBar(IconTextField.Icon icon)
 	{
 		IconTextField searchBar = new IconTextField();
 		searchBar.setIcon(icon);
 		searchBar.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 20, 30));
 		searchBar.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		searchBar.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
-		searchBar.getDocument().addDocumentListener(new DocumentListener()
-		{
-			@Override
-			public void insertUpdate(DocumentEvent e)
-			{
-				updateConsumer.accept(searchBar);
-			}
-
-			@Override
-			public void removeUpdate(DocumentEvent e)
-			{
-				updateConsumer.accept(searchBar);
-			}
-
-			@Override
-			public void changedUpdate(DocumentEvent e)
-			{
-				updateConsumer.accept(searchBar);
-			}
-		});
 		return searchBar;
 	}
 

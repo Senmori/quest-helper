@@ -38,6 +38,8 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import lombok.Getter;
 import static net.runelite.client.ui.PluginPanel.BORDER_OFFSET;
 import static net.runelite.client.ui.PluginPanel.PANEL_WIDTH;
@@ -62,7 +64,7 @@ public class SearchPanel extends JPanel
 	@Getter
 	private final JComboBox<Enum> filterDropdown, difficultyDropdown, orderDropdown;
 
-	public SearchPanel(QuestHelperPlugin plugin, Consumer<IconTextField> onSearchBarChanged)
+	public SearchPanel(QuestHelperPlugin plugin)
 	{
 		setBorder(new EmptyBorder(10, 10, 10, 10));
 		setLayout(new BorderLayout(0, BORDER_OFFSET));
@@ -70,13 +72,13 @@ public class SearchPanel extends JPanel
 		questsCompletedLabel.setForeground(Color.GRAY);
 		questsCompletedLabel.setText(TextUtil.alignLeft(
 			"Please log in to see available quests." +
-				"Note that not all quests are available in the Quest Helper yet."));
+				" Note that not all quests are available in the Quest Helper yet."));
 
 		allQuestsCompletedPanel.setLayout(new BorderLayout());
 		allQuestsCompletedPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 		allQuestsCompletedPanel.add(questsCompletedLabel);
 		allQuestsCompletedPanel.setVisible(false);
-		searchBar = PanelUtil.createSearchBar(IconTextField.Icon.SEARCH, onSearchBarChanged);
+		searchBar = PanelUtil.createSearchBar(IconTextField.Icon.SEARCH);
 
 		add(searchBar, BorderLayout.CENTER);
 		add(allQuestsCompletedPanel, BorderLayout.SOUTH);
@@ -101,6 +103,30 @@ public class SearchPanel extends JPanel
 
 
 		add(allDropdownSections, BorderLayout.NORTH);
+	}
+
+	public void setSearchBarDocumentListener(Consumer<IconTextField> onSearchBarChanged)
+	{
+		searchBar.getDocument().addDocumentListener(new DocumentListener()
+		{
+			@Override
+			public void insertUpdate(DocumentEvent e)
+			{
+				onSearchBarChanged.accept(searchBar);
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e)
+			{
+				onSearchBarChanged.accept(searchBar);
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e)
+			{
+				onSearchBarChanged.accept(searchBar);
+			}
+		});
 	}
 
 	public String getText()

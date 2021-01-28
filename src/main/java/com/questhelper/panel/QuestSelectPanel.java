@@ -43,13 +43,13 @@ import net.runelite.client.ui.PluginPanel;
 
 public class QuestSelectPanel extends JPanel
 {
+	private static final ImageIcon START_ICON = IconUtil.START.getIcon();
+
 	@Getter
 	private final List<String> keywords = new ArrayList<>();
 
 	@Getter
 	private final QuestHelper questHelper;
-
-	private static final ImageIcon START_ICON = IconUtil.START.getIcon();
 
 	public QuestSelectPanel(QuestHelperPlugin questHelperPlugin, QuestHelperPanel questHelperPanel, QuestHelper questHelper, QuestState questState)
 	{

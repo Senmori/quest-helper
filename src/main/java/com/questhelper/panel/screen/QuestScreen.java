@@ -24,53 +24,44 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel;
+package com.questhelper.panel.screen;
 
+import com.questhelper.BankItems;
 import com.questhelper.QuestHelperPlugin;
-import com.questhelper.panel.event.ScreenChange;
-import com.questhelper.panel.screen.QuestScreen;
-import java.awt.BorderLayout;
+import com.questhelper.QuestHelperQuest;
+import com.questhelper.panel.FixedWidthPanel;
+import com.questhelper.panel.QuestHelperPanel;
+import com.questhelper.questhelpers.QuestHelper;
+import java.util.List;
+import java.util.Map;
 import javax.annotation.Nonnull;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import net.runelite.client.eventbus.EventBus;
-import net.runelite.client.util.SwingUtil;
+import lombok.AccessLevel;
+import lombok.Getter;
+import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.QuestState;
 
-class ActiveContainer extends JScrollPane
+public abstract class QuestScreen extends FixedWidthPanel
 {
-	private final FixedWidthPanel currentDisplayPanel = new FixedWidthPanel();
-	private QuestScreen currentScreen = null;
-	private final QuestScreen _defaultScreen;
-	private final EventBus eventBus;
-
+	@Getter(AccessLevel.PROTECTED)
 	private final QuestHelperPlugin plugin;
-	protected ActiveContainer(QuestHelperPlugin plugin, final @Nonnull QuestScreen defaultScreen)
+	@Getter(AccessLevel.PROTECTED)
+	private final QuestHelperPanel rootPanel;
+
+	protected QuestScreen(QuestHelperPlugin plugin, QuestHelperPanel rootPanel)
 	{
 		this.plugin = plugin;
-		this.eventBus = plugin.getEventBus();
-		this._defaultScreen = defaultScreen;
-		currentDisplayPanel.setLayout(new BorderLayout());
-		setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		super.setViewportView(currentDisplayPanel);
-		this.currentScreen = defaultScreen;
+		this.rootPanel = rootPanel;
 	}
 
-	public QuestScreen getCurrentScreen()
+
+	public void updateQuests(List<QuestHelper> questHelpers, GameState gameState, Map<QuestHelperQuest, QuestState> questStates)
 	{
-		return currentScreen == null ? _defaultScreen : currentScreen;
+
 	}
 
-	public void setScreen(QuestScreen screen)
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
-		eventBus.post(new ScreenChange(screen, currentScreen));
-		plugin.getEventBus().register(screen == null ? _defaultScreen : screen);
-		if (currentScreen != null)
-		{
-			plugin.getEventBus().unregister(currentScreen);
-		}
-		SwingUtil.fastRemoveAll(currentDisplayPanel);
-		this.currentScreen = screen == null ? _defaultScreen : screen;
-		currentDisplayPanel.add(currentScreen, BorderLayout.NORTH);
-		revalidate();
+
 	}
 }

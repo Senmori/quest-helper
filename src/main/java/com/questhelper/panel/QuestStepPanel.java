@@ -329,6 +329,18 @@ public class QuestStepPanel extends JPanel implements RequirementContainer
 		}
 	}
 
+	public void update()
+	{
+		if (isCollapsed())
+		{
+			expand();
+		}
+		else
+		{
+			collapse();
+		}
+	}
+
 	void collapse()
 	{
 		if (!isCollapsed())

@@ -36,20 +36,14 @@ import com.google.inject.Provides;
 import com.questhelper.banktab.QuestBankTab;
 import com.questhelper.banktab.QuestHelperBankTagService;
 import com.questhelper.panel.QuestHelperPanel;
-import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.steps.QuestStep;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.swing.SwingUtilities;
@@ -63,7 +57,6 @@ import net.runelite.api.InventoryID;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
-import net.runelite.api.QuestState;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
@@ -137,6 +130,7 @@ public class QuestHelperPlugin extends Plugin
 
 	private static final Zone PHOENIX_START_ZONE = new Zone(new WorldPoint(3204, 3488, 0), new WorldPoint(3221, 3501, 0));
 
+	@Getter
 	private final BankItems bankItems = new BankItems();
 
 	@Getter
@@ -155,6 +149,7 @@ public class QuestHelperPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 
+	@Getter
 	@Inject
 	private EventBus eventBus;
 
@@ -202,6 +197,7 @@ public class QuestHelperPlugin extends Plugin
 
 	private QuestStep lastStep = null;
 
+	@Getter
 	private Map<String, QuestHelper> quests;
 
 	@Inject
@@ -244,6 +240,7 @@ public class QuestHelperPlugin extends Plugin
 		final BufferedImage icon = IconUtil.QUEST_ICON.getImage();
 
 		panel = new QuestHelperPanel(this);
+		eventBus.register(panel);
 		navButton = NavigationButton.builder()
 			.tooltip("Quest Helper")
 			.icon(icon)
@@ -316,7 +313,7 @@ public class QuestHelperPlugin extends Plugin
 		}
 		if (event.getItemContainer() == client.getItemContainer(InventoryID.INVENTORY))
 		{
-			clientThread.invokeLater(() -> panel.updateItemRequirements(client, bankItems));
+			clientThread.invokeLater(() -> panel.getCurrentScreen().updateRequirements(client, bankItems));
 		}
 	}
 
@@ -327,7 +324,6 @@ public class QuestHelperPlugin extends Plugin
 
 		if (state == GameState.LOGIN_SCREEN)
 		{
-			panel.refresh(Collections.emptyList(), true, new HashMap<>());
 			bankItems.setItems(null);
 			if (selectedQuest != null && selectedQuest.getCurrentStep() != null)
 			{
@@ -371,19 +367,19 @@ public class QuestHelperPlugin extends Plugin
 	{
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
-			List<QuestHelper> filteredQuests = quests.values()
-				.stream()
-				.filter(config.filterListBy())
-				.filter(config.difficulty())
-				.filter(Quest::showCompletedQuests)
-				.sorted(config.orderListBy())
-				.collect(Collectors.toList());
-			Map<QuestHelperQuest, QuestState> completedQuests = quests.values()
-				.stream()
-				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
-			SwingUtilities.invokeLater(() -> {
-				panel.refresh(filteredQuests, false, completedQuests);
-			});
+//			List<QuestHelper> filteredQuests = quests.values()
+//				.stream()
+//				.filter(config.filterListBy())
+//				.filter(config.difficulty())
+//				.filter(Quest::showCompletedQuests)
+//				.sorted(config.orderListBy())
+//				.collect(Collectors.toList());
+//			Map<QuestHelperQuest, QuestState> completedQuests = quests.values()
+//				.stream()
+//				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
+//			SwingUtilities.invokeLater(() -> {
+//				panel.getCurrentScreen().updateQuests(filteredQuests, client.getGameState(), completedQuests);
+//			});
 		}
 	}
 
@@ -778,30 +774,5 @@ public class QuestHelperPlugin extends Plugin
 
 		log.debug("Loaded quest helper {}", clazz.getSimpleName());
 		return questHelper;
-	}
-
-
-	/**
-	 * Get the var of a quest while off the client thread.
-	 * <br>
-	 * This method swallows exceptions.
-	 *
-	 * @param quest the quest to query
-	 * @return the current var of the quest, or {@link Integer#MIN_VALUE} if there was a problem.
-	 */
-	public synchronized int getSafeQuestVar(QuestHelperQuest quest)
-	{
-		FutureTask<Integer> task = new FutureTask<>(() -> quest.getVar(client));
-		clientThread.invoke(task);
-		int var = Integer.MIN_VALUE;
-		try
-		{
-			var = task.get();
-		}
-		catch (InterruptedException | ExecutionException e)
-		{
-			log.error("Error retrieving quest state for Quest " + quest.getName() + ".", e);
-		}
-		return var;
 	}
 }
