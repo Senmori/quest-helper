@@ -36,14 +36,18 @@ import com.google.inject.Provides;
 import com.questhelper.banktab.QuestBankTab;
 import com.questhelper.banktab.QuestHelperBankTagService;
 import com.questhelper.panel.QuestHelperPanel;
+import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.steps.QuestStep;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.swing.SwingUtilities;
@@ -57,6 +61,7 @@ import net.runelite.api.InventoryID;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
+import net.runelite.api.QuestState;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
@@ -240,6 +245,7 @@ public class QuestHelperPlugin extends Plugin
 		final BufferedImage icon = IconUtil.QUEST_ICON.getImage();
 
 		panel = new QuestHelperPanel(this);
+		injector.injectMembers(panel);
 		eventBus.register(panel);
 		navButton = NavigationButton.builder()
 			.tooltip("Quest Helper")
@@ -279,6 +285,7 @@ public class QuestHelperPlugin extends Plugin
 	{
 		if (sidebarSelectedQuest != null)
 		{
+			log.debug("SIDEBAR QUEST: " + sidebarSelectedQuest.getQuest().getName());
 			startUpQuest(sidebarSelectedQuest);
 			sidebarSelectedQuest = null;
 		}
@@ -324,6 +331,7 @@ public class QuestHelperPlugin extends Plugin
 
 		if (state == GameState.LOGIN_SCREEN)
 		{
+			panel.getCurrentScreen().updateQuests(Collections.emptyList(), state, new HashMap<>());
 			bankItems.setItems(null);
 			if (selectedQuest != null && selectedQuest.getCurrentStep() != null)
 			{
@@ -367,19 +375,19 @@ public class QuestHelperPlugin extends Plugin
 	{
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
-//			List<QuestHelper> filteredQuests = quests.values()
-//				.stream()
-//				.filter(config.filterListBy())
-//				.filter(config.difficulty())
-//				.filter(Quest::showCompletedQuests)
-//				.sorted(config.orderListBy())
-//				.collect(Collectors.toList());
-//			Map<QuestHelperQuest, QuestState> completedQuests = quests.values()
-//				.stream()
-//				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
-//			SwingUtilities.invokeLater(() -> {
-//				panel.getCurrentScreen().updateQuests(filteredQuests, client.getGameState(), completedQuests);
-//			});
+			List<QuestHelper> filteredQuests = quests.values()
+				.stream()
+				.filter(config.filterListBy())
+				.filter(config.difficulty())
+				.filter(Quest::showCompletedQuests)
+				.sorted(config.orderListBy())
+				.collect(Collectors.toList());
+			Map<QuestHelperQuest, QuestState> completedQuests = quests.values()
+				.stream()
+				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
+			SwingUtilities.invokeLater(() -> {
+				panel.getCurrentScreen().updateQuests(filteredQuests, client.getGameState(), completedQuests);
+			});
 		}
 	}
 

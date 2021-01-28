@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
+import javax.inject.Inject;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import lombok.AccessLevel;
@@ -58,6 +59,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.ColorScheme;
@@ -66,6 +68,15 @@ import net.runelite.client.ui.PluginPanel;
 @Slf4j
 public class QuestHelperPanel extends PluginPanel
 {
+	@Inject
+	private EventBus eventBus;
+
+	@Inject
+	private Client client;
+
+	@Inject
+	private ClientThread clientThread;
+
 	@Getter
 	private final QuestOverviewPanel questOverviewPanel;
 
@@ -74,20 +85,17 @@ public class QuestHelperPanel extends PluginPanel
 	// ui-upgrade fields
 	private final TitlePanel titlePanel = new TitlePanel("Quest Helper");
 	private final SearchPanel searchPanel;
+	@Getter
 	private final ActiveContainer activeContainer;
 	private final QuestSearchScreen questSearchScreen;
 
 	@Getter(AccessLevel.PUBLIC)
 	private final BankItems bankItems = new BankItems();
-	private final Client client;
-	private final ClientThread clientThread;
 
 	public QuestHelperPanel(QuestHelperPlugin plugin)
 	{
 		super(false);
 		this.plugin = plugin;
-		this.client = plugin.getClient();
-		this.clientThread = plugin.getClientThread();
 
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setLayout(new BorderLayout());
@@ -105,21 +113,29 @@ public class QuestHelperPanel extends PluginPanel
 		/* Screens */
 		questOverviewPanel = new QuestOverviewPanel(plugin, this);
 		questSearchScreen = new QuestSearchScreen(plugin,this, searchPanel);
-		this.activeContainer = new ActiveContainer(plugin, questSearchScreen.getQuestListPanel());
+		this.activeContainer = new ActiveContainer(plugin, questSearchScreen);
+		activeContainer.addListener((newScreen, old) -> {
+			if (newScreen == null)
+			{
+				searchPanel.getAllDropdownSections().setVisible(true);
+			}
+		});
 
 		add(activeContainer, BorderLayout.CENTER);
+		setActiveDisplay(questSearchScreen);
 		questSearchScreen.updateSearchFilter("");
 	}
 
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		log.debug("GAME TICK");
+
 	}
 
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
+
 		if (event.getItemContainer() == client.getItemContainer(InventoryID.BANK))
 		{
 			bankItems.setItems(null);
@@ -134,11 +150,13 @@ public class QuestHelperPanel extends PluginPanel
 	@Subscribe
 	public void onGameStateChanged(final GameStateChanged event)
 	{
+
 		final GameState state = event.getGameState();
 
 		if (state == GameState.LOGIN_SCREEN)
 		{
-			getCurrentScreen().updateQuests(Collections.emptyList(), state, new HashMap<>());
+			log.debug("Current Screen: " + getCurrentScreen().getClass().getSimpleName());
+			SwingUtilities.invokeLater(() -> getCurrentScreen().updateQuests(Collections.emptyList(), state, new HashMap<>()));
 			bankItems.setItems(null);
 		}
 		if (state == GameState.LOGGED_IN)
@@ -151,6 +169,7 @@ public class QuestHelperPanel extends PluginPanel
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
+
 		if (event.getGroup().equals("questhelper") && configEvents.contains(event.getKey()))
 		{
 			clientThread.invokeLater(this::updateQuestList);
@@ -173,6 +192,7 @@ public class QuestHelperPanel extends PluginPanel
 				.stream()
 				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
 			SwingUtilities.invokeLater(() -> getCurrentScreen().updateQuests(filteredQuests, client.getGameState(), questStates));
+			;
 		}
 	}
 
@@ -202,6 +222,8 @@ public class QuestHelperPanel extends PluginPanel
 
 	public final void setActiveDisplay(QuestScreen component)
 	{
+		log.debug("Screen Change: " + activeContainer.getCurrentScreen().getClass().getSimpleName() + " -> " + component.getClass().getSimpleName());
+		log.debug("Called from: " + Arrays.toString(Thread.currentThread().getStackTrace()));
 		activeContainer.setScreen(component);
 	}
 
@@ -213,6 +235,7 @@ public class QuestHelperPanel extends PluginPanel
 	//TODO: This method stays after some rework
 	public void addQuest(QuestHelper quest, boolean isActive)
 	{
+		log.debug("Quest added: " + quest.getQuest().getName() + " - Active: " + isActive);
 		searchPanel.getAllDropdownSections().setVisible(false);
 		setActiveDisplay(questOverviewPanel);
 
@@ -246,7 +269,7 @@ public class QuestHelperPanel extends PluginPanel
 	public void removeQuest()
 	{
 		searchPanel.getAllDropdownSections().setVisible(true);
-		setActiveDisplay(questSearchScreen.getQuestListPanel());
+		setActiveDisplay(questSearchScreen);
 		questOverviewPanel.removeQuest();
 
 		repaint();

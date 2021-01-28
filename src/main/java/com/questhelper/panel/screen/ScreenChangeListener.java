@@ -24,16 +24,9 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.event;
+package com.questhelper.panel.screen;
 
-import com.questhelper.panel.screen.QuestScreen;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@AllArgsConstructor
-@Getter
-public class ScreenChange
+public interface ScreenChangeListener
 {
-	private final QuestScreen newScreen;
-	private final QuestScreen oldScreen;
+	void onScreenChange(QuestScreen newScreen, QuestScreen oldScreen);
 }

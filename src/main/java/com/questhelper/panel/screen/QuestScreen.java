@@ -62,6 +62,5 @@ public abstract class QuestScreen extends FixedWidthPanel
 
 	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
-
 	}
 }

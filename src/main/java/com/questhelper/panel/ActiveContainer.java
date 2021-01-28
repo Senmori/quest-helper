@@ -27,13 +27,14 @@
 package com.questhelper.panel;
 
 import com.questhelper.QuestHelperPlugin;
-import com.questhelper.panel.event.ScreenChange;
 import com.questhelper.panel.screen.QuestScreen;
+import com.questhelper.panel.screen.ScreenChangeListener;
 import java.awt.BorderLayout;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
-import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.util.SwingUtil;
 
 class ActiveContainer extends JScrollPane
@@ -41,18 +42,16 @@ class ActiveContainer extends JScrollPane
 	private final FixedWidthPanel currentDisplayPanel = new FixedWidthPanel();
 	private QuestScreen currentScreen = null;
 	private final QuestScreen _defaultScreen;
-	private final EventBus eventBus;
+	private final List<ScreenChangeListener> listeners = new ArrayList<>();
 
 	private final QuestHelperPlugin plugin;
 	protected ActiveContainer(QuestHelperPlugin plugin, final @Nonnull QuestScreen defaultScreen)
 	{
 		this.plugin = plugin;
-		this.eventBus = plugin.getEventBus();
 		this._defaultScreen = defaultScreen;
 		currentDisplayPanel.setLayout(new BorderLayout());
 		setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		super.setViewportView(currentDisplayPanel);
-		this.currentScreen = defaultScreen;
+		setViewportView(currentDisplayPanel);
 	}
 
 	public QuestScreen getCurrentScreen()
@@ -62,7 +61,7 @@ class ActiveContainer extends JScrollPane
 
 	public void setScreen(QuestScreen screen)
 	{
-		eventBus.post(new ScreenChange(screen, currentScreen));
+		listeners.forEach(listener -> listener.onScreenChange(screen, currentScreen));
 		plugin.getEventBus().register(screen == null ? _defaultScreen : screen);
 		if (currentScreen != null)
 		{
@@ -72,5 +71,10 @@ class ActiveContainer extends JScrollPane
 		this.currentScreen = screen == null ? _defaultScreen : screen;
 		currentDisplayPanel.add(currentScreen, BorderLayout.NORTH);
 		revalidate();
+	}
+
+	public void addListener(@Nonnull ScreenChangeListener listener)
+	{
+		listeners.add(listener);
 	}
 }

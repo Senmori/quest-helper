@@ -40,6 +40,7 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -48,12 +49,14 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicButtonUI;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.SwingUtil;
 
+@Slf4j
 public class QuestOverviewPanel extends QuestScreen
 {
 	private final QuestHelperPlugin questHelperPlugin;
@@ -461,7 +464,8 @@ public class QuestOverviewPanel extends QuestScreen
 		return new Dimension(PluginPanel.PANEL_WIDTH, super.getPreferredSize().height);
 	}
 
-	public void updateRequirements(Client client, BankItems bankItems)
+	@Override
+	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
 		updateRequirementPanels(client, requirementPanels, bankItems);
 

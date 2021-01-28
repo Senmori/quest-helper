@@ -29,28 +29,32 @@ package com.questhelper.panel.screen;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.QuestHelperQuest;
 import com.questhelper.panel.QuestHelperPanel;
-import com.questhelper.panel.component.QuestListPanel;
+import com.questhelper.panel.QuestSelectPanel;
 import com.questhelper.panel.component.SearchPanel;
-import com.questhelper.panel.event.ScreenChange;
 import com.questhelper.questhelpers.QuestHelper;
-import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.swing.JLabel;
+import javax.swing.border.EmptyBorder;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.GameState;
 import net.runelite.api.QuestState;
-import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.DynamicGridLayout;
+import net.runelite.client.util.Text;
 
+@Slf4j
 public class QuestSearchScreen extends QuestScreen
 {
 	@Getter
-	private final QuestListPanel questListPanel;
+	private List<QuestSelectPanel> questSelectPanels = new ArrayList<>();
 
 	private final SearchPanel searchPanel;
 
@@ -58,19 +62,11 @@ public class QuestSearchScreen extends QuestScreen
 	{
 		super(plugin, rootPanel);
 		this.searchPanel = searchPanel;
-		this.questListPanel = new QuestListPanel(plugin, rootPanel);
 		searchPanel.setSearchBarDocumentListener(searchBar -> updateSearchFilter(searchBar.getText()));
-		setLayout(new BorderLayout());
+		setBorder(new EmptyBorder(8, 10, 0, 10));
+		setLayout(new DynamicGridLayout(0, 1, 0, 5));
+		setAlignmentX(Component.LEFT_ALIGNMENT);
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
-	}
-
-	@Subscribe
-	public void onScreenChange(ScreenChange event)
-	{
-		if (event.getNewScreen() == null)
-		{
-			searchPanel.getAllDropdownSections().setVisible(true);
-		}
 	}
 
 	public void emptySearchBar()
@@ -80,10 +76,11 @@ public class QuestSearchScreen extends QuestScreen
 
 	public void updateSearchFilter(String filter)
 	{
-		if (filter != null && !filter.isEmpty())
+		QuestHelper currentQuest = getRootPanel().getQuestOverviewPanel().currentQuest;
+		if (currentQuest == null || (filter != null && !filter.isEmpty()) )
 		{
-			getRootPanel().setActiveDisplay(questListPanel);
-			questListPanel.removeAllQuests();
+			getRootPanel().setActiveDisplay(this);
+			removeAllQuests();
 			showMatchingQuests(filter);
 		}
 		else
@@ -97,26 +94,34 @@ public class QuestSearchScreen extends QuestScreen
 	{
 		if (filter.isEmpty())
 		{
-			questListPanel.addAllQuests();
+			addAllQuests();
 			return;
 		}
 
 		final String[] searchTerms = filter.toLowerCase(Locale.ROOT).split(" ");
 
-		questListPanel.addQuestsThatMatchSearchTerms(Arrays.asList(searchTerms));
+		addQuestsThatMatchSearchTerms(Arrays.asList(searchTerms));
 	}
 
+	@Override
 	public void updateQuests(List<QuestHelper> questHelpers, GameState gameState, Map<QuestHelperQuest, QuestState> completedQuests)
 	{
+		log.debug("QUEST SEARCH SCREEN UPDATE QUESTS");
 		searchPanel.getFilterDropdown().setSelectedItem(getPlugin().getConfig().filterListBy());
 		searchPanel.getDifficultyDropdown().setSelectedItem(getPlugin().getConfig().difficulty());
 		searchPanel.getOrderDropdown().setSelectedItem(getPlugin().getConfig().orderListBy());
 
-		questListPanel.updateQuests(questHelpers, gameState, completedQuests);
+		questSelectPanels.forEach(this::remove);
+		questSelectPanels.clear();
+		for (QuestHelper questHelper : questHelpers)
+		{
+			QuestState questState = completedQuests.getOrDefault(questHelper.getQuest(),QuestState.NOT_STARTED);
+			questSelectPanels.add(new QuestSelectPanel(getPlugin(), getRootPanel(), questHelper, questState));
+		}
 
 		Set<QuestHelperQuest> quests = completedQuests.keySet();
 		boolean hasMoreQuests = quests.stream().anyMatch(q -> completedQuests.get(q) != QuestState.FINISHED);
-		if (questListPanel.isEmpty() && hasMoreQuests)
+		if (isEmpty() && hasMoreQuests)
 		{
 			searchPanel.getAllQuestsCompletedPanel().removeAll();
 			JLabel noMatch = new JLabel();
@@ -131,10 +136,33 @@ public class QuestSearchScreen extends QuestScreen
 			}
 			searchPanel.getAllQuestsCompletedPanel().add(noMatch);
 		}
-		searchPanel.getAllQuestsCompletedPanel().setVisible(questListPanel.isEmpty());
+		searchPanel.getAllQuestsCompletedPanel().setVisible(isEmpty());
 
-		repaint();
 		revalidate();
+		repaint();
 		showMatchingQuests(searchPanel.hasText() ? searchPanel.getText() : "");
+	}
+
+	public boolean isEmpty()
+	{
+		return questSelectPanels.isEmpty();
+	}
+
+	public void removeAllQuests()
+	{
+		questSelectPanels.forEach(this::remove);
+	}
+
+	public void addAllQuests()
+	{
+		questSelectPanels.forEach(this::add);
+	}
+
+	public void addQuestsThatMatchSearchTerms(List<String> searchTerms)
+	{
+		questSelectPanels
+			.stream()
+			.filter(panel -> Text.matchesSearchTerms(searchTerms, panel.getKeywords()))
+			.forEach(this::add);
 	}
 }
