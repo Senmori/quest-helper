@@ -35,8 +35,10 @@ import com.questhelper.panel.screen.QuestSearchScreen;
 import com.questhelper.panel.screen.ScreenFactory;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
+import com.questhelper.requirements.RequirementContainer;
 import com.questhelper.steps.QuestStep;
 import java.awt.BorderLayout;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,8 +47,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import lombok.AccessLevel;
@@ -59,8 +65,8 @@ import net.runelite.api.QuestState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.ColorScheme;
@@ -69,15 +75,6 @@ import net.runelite.client.ui.PluginPanel;
 @Slf4j
 public class QuestHelperPanel extends PluginPanel
 {
-	@Inject
-	private EventBus eventBus;
-
-	@Inject
-	private Client client;
-
-	@Inject
-	private ClientThread clientThread;
-
 	@Getter
 	private final QuestOverviewPanel questOverviewPanel;
 
@@ -91,13 +88,27 @@ public class QuestHelperPanel extends PluginPanel
 	private final ActiveContainer activeContainer;
 	private final QuestSearchScreen questSearchScreen;
 
+	private final List<RequirementContainer> requirementContainers = new ArrayList<>();
+	private final List<QuestContainer> questContainers = new ArrayList<>();
+	private final Map<Predicate<QuestScreen>, Consumer<QuestScreen>> screenFilters = new HashMap<>();
+
 	@Getter(AccessLevel.PUBLIC)
 	private final BankItems bankItems = new BankItems();
+	private final Client client;
+	private final ClientThread clientThread;
+	private GameState currentClientGameState;
+
+	// Quest vars ->
+	private QuestHelper selectedQuest, sidebarSelectedQuest;
+	private QuestStep lastStep = null;
+	private boolean loadQuestList;
 
 	public QuestHelperPanel(QuestHelperPlugin plugin)
 	{
 		super(false);
 		this.plugin = plugin;
+		this.client = plugin.getClient();
+		this.clientThread = plugin.getClientThread();
 
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setLayout(new BorderLayout());
@@ -112,23 +123,22 @@ public class QuestHelperPanel extends PluginPanel
 
 		add(introDetailsPanel, BorderLayout.NORTH);
 
-		/* Screens */
-		questOverviewPanel = ScreenFactory.registerScreen(eventBus, new QuestOverviewPanel(plugin, this));
-		questSearchScreen = ScreenFactory.registerScreen(eventBus,new QuestSearchScreen(plugin, this, searchPanel));
-		this.activeContainer = new ActiveContainer(plugin, questSearchScreen);
+		buildScreenFilters();
 
-		plugin.getEventBus().register(questOverviewPanel);
-		plugin.getEventBus().register(questSearchScreen);
+		/* Screens */
+		questOverviewPanel = registerScreen(QuestOverviewPanel::new);
+		questSearchScreen = registerScreen(QuestSearchScreen::new);
+		this.activeContainer = new ActiveContainer(plugin, questSearchScreen);
 
 		add(activeContainer, BorderLayout.CENTER);
 		setActiveDisplay(questSearchScreen);
 		questSearchScreen.updateSearchFilter("");
 	}
 
-	@Subscribe
-	public void onGameTick(GameTick event)
+	private void buildScreenFilters()
 	{
-
+		screenFilters.put(RequirementContainer.class::isInstance, (screen) -> requirementContainers.add((RequirementContainer) screen));
+		screenFilters.put(QuestContainer.class::isInstance, (screen) -> questContainers.add((QuestContainer) screen));
 	}
 
 	@Subscribe
@@ -142,25 +152,28 @@ public class QuestHelperPanel extends PluginPanel
 		}
 		if (event.getItemContainer() == client.getItemContainer(InventoryID.INVENTORY))
 		{
-			clientThread.invokeLater(() -> getCurrentScreen().updateRequirements(client, bankItems));
+			clientThread.invokeLater(() -> updateRequirements(client, bankItems));
 		}
 	}
 
 	@Subscribe
 	public void onGameStateChanged(final GameStateChanged event)
 	{
-
 		final GameState state = event.getGameState();
+		this.currentClientGameState = state;
 
 		if (state == GameState.LOGIN_SCREEN)
 		{
-			log.debug("Current Screen: " + getCurrentScreen().getClass().getSimpleName());
-			SwingUtilities.invokeLater(() -> getCurrentScreen().updateQuests(Collections.emptyList(), state, new HashMap<>()));
+			SwingUtilities.invokeLater(() -> updateQuests(Collections.emptyList(), state, new HashMap<>()));
 			bankItems.setItems(null);
+			if (selectedQuest != null && selectedQuest.getCurrentStep() != null)
+			{
+				shutDownQuest(true);
+			}
 		}
 		if (state == GameState.LOGGED_IN)
 		{
-			updateQuestList();
+			loadQuestList = true;
 		}
 	}
 
@@ -175,7 +188,7 @@ public class QuestHelperPanel extends PluginPanel
 		}
 	}
 
-	private void updateQuestList()
+	public void updateQuestList()
 	{
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
@@ -190,9 +203,132 @@ public class QuestHelperPanel extends PluginPanel
 			Map<QuestHelperQuest, QuestState> questStates = plugin.getQuests().values()
 				.stream()
 				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
-			SwingUtilities.invokeLater(() -> getCurrentScreen().updateQuests(filteredQuests, client.getGameState(), questStates));
-			;
+			SwingUtilities.invokeLater(() -> updateQuests(filteredQuests, client.getGameState(), questStates));
 		}
+	}
+
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		if (sidebarSelectedQuest != null)
+		{
+			log.debug("SIDEBAR QUEST: " + sidebarSelectedQuest.getQuest().getName());
+			startUpQuest(sidebarSelectedQuest);
+			sidebarSelectedQuest = null;
+		}
+		else if (selectedQuest != null)
+		{
+			if (selectedQuest.getCurrentStep() != null)
+			{
+				updateSteps();
+				QuestStep currentStep = selectedQuest.getCurrentStep().getSidePanelStep();
+				if (currentStep != null && currentStep != lastStep)
+				{
+					lastStep = currentStep;
+					updateHighlight(currentStep);
+				}
+				updateLocks();
+			}
+		}
+		if (loadQuestList)
+		{
+			loadQuestList = false;
+		}
+	}
+
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+
+		boolean shouldShutDownQuest = selectedQuest != null && selectedQuest.updateQuest() && selectedQuest.getCurrentStep() == null;
+		if (shouldShutDownQuest)
+		{
+			shutDownQuest(true);
+		}
+	}
+
+	public void startUpQuest(QuestHelper questHelper)
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+
+		shutDownQuest(true);
+
+		if (!questHelper.isCompleted())
+		{
+			selectedQuest = questHelper;
+			plugin.getEventBus().register(selectedQuest);
+			if (plugin.isDeveloperMode())
+			{
+				selectedQuest.debugStartup(plugin.getConfig());
+			}
+			selectedQuest.startUp(plugin.getConfig());
+			if (selectedQuest.getCurrentStep() == null)
+			{
+				//TODO: throw error
+				shutDownQuest(false);
+				return;
+			}
+			plugin.getBankTagsMain().startUp();
+			SwingUtilities.invokeLater(() -> {
+				removeQuest();
+				addQuest(questHelper, true);
+				clientThread.invokeLater(() -> updateItemRequirements(client, bankItems));
+			});
+		}
+		else
+		{
+			removeQuest();
+			selectedQuest = null;
+		}
+	}
+
+	public void shutDownQuestFromSidebar()
+	{
+		if (selectedQuest != null)
+		{
+			selectedQuest.shutDown();
+			plugin.getBankTagsMain().shutDown();
+			SwingUtilities.invokeLater(this::removeQuest);
+			plugin.getEventBus().unregister(selectedQuest);
+			selectedQuest = null;
+		}
+	}
+
+	public void shutDownQuest(boolean shouldUpdateList)
+	{
+		if (selectedQuest != null)
+		{
+			selectedQuest.shutDown();
+			if (shouldUpdateList)
+			{
+				updateQuestList();
+			}
+			if (plugin.getBankTagsMain() != null)
+			{
+				plugin.getBankTagsMain().shutDown();
+			}
+			SwingUtilities.invokeLater(this::removeQuest);
+			plugin.getEventBus().unregister(selectedQuest);
+			selectedQuest = null;
+		}
+	}
+
+
+	private void updateQuests(List<QuestHelper> quests, GameState state, Map<QuestHelperQuest, QuestState> questStates)
+	{
+		 questContainers.forEach(qc -> qc.updateQuests(quests, state, questStates));
+	}
+
+	private void updateRequirements(Client client, BankItems bankItems)
+	{
+		requirementContainers.forEach(rc -> rc.updateRequirements(client, bankItems));
 	}
 
 	/**
@@ -205,31 +341,76 @@ public class QuestHelperPanel extends PluginPanel
 	 */
 	public synchronized int getSafeQuestVar(QuestHelperQuest quest)
 	{
-		FutureTask<Integer> task = new FutureTask<>(() -> quest.getVar(client));
+		Integer var = runOnClientThread(c -> quest.getVar(client), Integer.MIN_VALUE);
+		return var == null ? Integer.MIN_VALUE : var;
+	}
+
+	@Nullable
+	public synchronized <T> T runOnClientThread(Function<Client, T> func, T defaultValue)
+	{
+		FutureTask<T> task = new FutureTask<>(() -> func.apply(client));
 		clientThread.invoke(task);
-		int var = Integer.MIN_VALUE;
+		T var = null;
 		try
 		{
 			var = task.get();
 		}
 		catch (InterruptedException | ExecutionException e)
 		{
-			log.error("Error retrieving quest state for Quest " + quest.getName() + ".", e);
+			log.error("Error running operation on client thread. Called from " + Thread.currentThread().getStackTrace()[1].getClassName() + ".", e);
+			return defaultValue;
+		}
+		if (var == null) {
+			var = defaultValue;
 		}
 		return var;
 	}
 
-	public final void setActiveDisplay(QuestScreen component)
+	@Nonnull
+	public synchronized QuestState getSafeQuestState(QuestHelperQuest quest)
 	{
-		log.debug("Screen Change: " + activeContainer.getCurrentScreen().getClass().getSimpleName() + " -> " + component.getClass().getSimpleName());
-		log.debug("Called from: " + Arrays.toString(Thread.currentThread().getStackTrace()));
-		activeContainer.setScreen(component);
+		QuestState questState = runOnClientThread(c -> quest.getState(client), QuestState.NOT_STARTED);
+		return questState == null ? QuestState.NOT_STARTED : questState;
+	}
+
+	public GameState getClientGameState()
+	{
+		return this.currentClientGameState;
+	}
+
+	public final void setActiveDisplay(QuestScreen screen)
+	{
+		activeContainer.setScreen(screen);
 	}
 
 	public QuestScreen getCurrentScreen()
 	{
 		return activeContainer.getCurrentScreen();
 	}
+
+	public void startQuest(QuestHelper quest)
+	{
+		addQuest(quest, true);
+		questSearchScreen.emptySearchBar();
+	}
+
+	public <T extends QuestScreen> T registerScreen(ScreenFactory<T> factory)
+	{
+		T screen = factory.apply(plugin, this);
+		plugin.getEventBus().register(screen);
+		screenFilters.entrySet()
+			.stream()
+			.filter(e -> e.getKey().test(screen))
+			.forEach(e -> e.getValue().accept(screen));
+		return screen;
+	}
+
+	/**********************
+	 *
+	 * Everything below here will be removed eventually
+	 *
+	 **********************
+	 */
 
 	//TODO: This method stays after some rework
 	public void addQuest(QuestHelper quest, boolean isActive)
@@ -242,6 +423,12 @@ public class QuestHelperPanel extends PluginPanel
 
 		repaint();
 		revalidate();
+	}
+
+	@Deprecated
+	public void updateQuestsExternal(List<QuestHelper> quests, GameState state, Map<QuestHelperQuest, QuestState> questStates)
+	{
+		questContainers.forEach(qc -> qc.updateQuests(quests, state, questStates));
 	}
 
 	public void updateSteps()
@@ -275,13 +462,14 @@ public class QuestHelperPanel extends PluginPanel
 		revalidate();
 	}
 
-	public void emptyBar()
-	{
-		searchPanel.setText("");
-	}
-
 	public void updateItemRequirements(Client client, BankItems bankItems)
 	{
-		questOverviewPanel.updateRequirements(client, bankItems);
+		requirementContainers.forEach(rc -> rc.updateRequirements(client, bankItems));
+	}
+
+	@Nullable
+	public QuestHelper getCurrentQuest()
+	{
+		return getQuestOverviewPanel().currentQuest;
 	}
 }

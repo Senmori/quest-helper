@@ -28,8 +28,10 @@ package com.questhelper.panel.event;
 
 import com.questhelper.panel.screen.QuestScreen;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
+@Getter
 public class ScreenChange
 {
 	private final QuestScreen newScreen;

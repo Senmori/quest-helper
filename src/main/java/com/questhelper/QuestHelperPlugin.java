@@ -36,40 +36,28 @@ import com.google.inject.Provides;
 import com.questhelper.banktab.QuestBankTab;
 import com.questhelper.banktab.QuestHelperBankTagService;
 import com.questhelper.panel.QuestHelperPanel;
-import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.steps.QuestStep;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
-import net.runelite.api.InventoryID;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
-import net.runelite.api.QuestState;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -77,7 +65,6 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.plugins.Plugin;
@@ -141,6 +128,7 @@ public class QuestHelperPlugin extends Plugin
 	@Getter
 	private QuestHelperBankTagService bankTagService;
 
+	@Getter
 	private QuestBankTab bankTagsMain;
 
 	@Getter
@@ -259,6 +247,7 @@ public class QuestHelperPlugin extends Plugin
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			loadQuestList = true;
+			panel.updateQuestList();
 		}
 	}
 
@@ -274,121 +263,10 @@ public class QuestHelperPlugin extends Plugin
 			overlayManager.remove(questHelperDebugOverlay);
 		}
 		clientToolbar.removeNavigation(navButton);
-		shutDownQuest(false);
+		panel.shutDownQuest(false);
 		bankTagService = null;
 		bankTagsMain = null;
 		quests = null;
-	}
-
-	@Subscribe
-	public void onGameTick(GameTick event)
-	{
-		if (sidebarSelectedQuest != null)
-		{
-			log.debug("SIDEBAR QUEST: " + sidebarSelectedQuest.getQuest().getName());
-			startUpQuest(sidebarSelectedQuest);
-			sidebarSelectedQuest = null;
-		}
-		else if (selectedQuest != null)
-		{
-			if (selectedQuest.getCurrentStep() != null)
-			{
-				panel.updateSteps();
-				QuestStep currentStep = selectedQuest.getCurrentStep().getSidePanelStep();
-				if (currentStep != null && currentStep != lastStep)
-				{
-					lastStep = currentStep;
-					panel.updateHighlight(currentStep);
-				}
-				panel.updateLocks();
-			}
-		}
-		if (loadQuestList)
-		{
-			loadQuestList = false;
-			updateQuestList();
-		}
-	}
-
-	@Subscribe
-	public void onItemContainerChanged(ItemContainerChanged event)
-	{
-		if (event.getItemContainer() == client.getItemContainer(InventoryID.BANK))
-		{
-			bankItems.setItems(null);
-			bankItems.setItems(event.getItemContainer().getItems());
-		}
-		if (event.getItemContainer() == client.getItemContainer(InventoryID.INVENTORY))
-		{
-			clientThread.invokeLater(() -> panel.getCurrentScreen().updateRequirements(client, bankItems));
-		}
-	}
-
-	@Subscribe
-	public void onGameStateChanged(final GameStateChanged event)
-	{
-		final GameState state = event.getGameState();
-
-		if (state == GameState.LOGIN_SCREEN)
-		{
-			panel.getCurrentScreen().updateQuests(Collections.emptyList(), state, new HashMap<>());
-			bankItems.setItems(null);
-			if (selectedQuest != null && selectedQuest.getCurrentStep() != null)
-			{
-				shutDownQuest(true);
-			}
-		}
-
-		if (state == GameState.LOGGED_IN)
-		{
-			loadQuestList = true;
-		}
-	}
-
-	@Subscribe
-	public void onVarbitChanged(VarbitChanged event)
-	{
-		if (!(client.getGameState() == GameState.LOGGED_IN))
-		{
-			return;
-		}
-
-		if (selectedQuest != null
-			&& selectedQuest.updateQuest()
-			&& selectedQuest.getCurrentStep() == null)
-		{
-			shutDownQuest(true);
-		}
-	}
-
-	private final Collection<String> configEvents = Arrays.asList("orderListBy", "filterListBy", "questDifficulty", "showCompletedQuests");
-	@Subscribe
-	public void onConfigChanged(ConfigChanged event)
-	{
-		if (event.getGroup().equals("questhelper") && configEvents.contains(event.getKey()))
-		{
-			clientThread.invokeLater(this::updateQuestList);
-		}
-	}
-
-	public void updateQuestList()
-	{
-		if (client.getGameState() == GameState.LOGGED_IN)
-		{
-			List<QuestHelper> filteredQuests = quests.values()
-				.stream()
-				.filter(config.filterListBy())
-				.filter(config.difficulty())
-				.filter(Quest::showCompletedQuests)
-				.sorted(config.orderListBy())
-				.collect(Collectors.toList());
-			Map<QuestHelperQuest, QuestState> completedQuests = quests.values()
-				.stream()
-				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
-			SwingUtilities.invokeLater(() -> {
-				panel.getCurrentScreen().updateQuests(filteredQuests, client.getGameState(), completedQuests);
-			});
-		}
 	}
 
 	@Subscribe
@@ -401,60 +279,60 @@ public class QuestHelperPlugin extends Plugin
 				case MENUOP_STARTHELPER:
 					event.consume();
 					String quest = Text.removeTags(event.getMenuTarget());
-					startUpQuest(quests.get(quest));
+					panel.startUpQuest(quests.get(quest));
 					break;
 				case MENUOP_STOPHELPER:
 					event.consume();
-					shutDownQuest(true);
+					panel.shutDownQuest(true);
 					break;
 				case MENUOP_PHOENIXGANG:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_PHOENIX_GANG.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_PHOENIX_GANG.getName()));
 					break;
 				case MENUOP_BLACKARMGANG:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_BLACK_ARM_GANG.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_BLACK_ARM_GANG.getName()));
 					break;
 				case MENUOP_RFD_START:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_START.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_START.getName()));
 					break;
 
 				case MENUOP_RFD_DWARF:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_DWARF.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_DWARF.getName()));
 					break;
 				case MENUOP_RFD_EVIL_DAVE:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_EVIL_DAVE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_EVIL_DAVE.getName()));
 					break;
 				case MENUOP_RFD_GOBLINS:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_WARTFACE_AND_BENTNOZE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_WARTFACE_AND_BENTNOZE.getName()));
 					break;
 				case MENUOP_RFD_PIRATE_PETE:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_PIRATE_PETE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_PIRATE_PETE.getName()));
 					break;
 				case MENUOP_RFD_LUMBRIDGE_GUIDE:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_LUMBRIDGE_GUIDE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_LUMBRIDGE_GUIDE.getName()));
 					break;
 				case MENUOP_RFD_SKRACH_UGLOGWEE:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_SKRACH_UGLOGWEE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_SKRACH_UGLOGWEE.getName()));
 					break;
 				case MENUOP_RFD_SIR_AMIK_VARZE:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_SIR_AMIK_VARZE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_SIR_AMIK_VARZE.getName()));
 					break;
 				case MENUOP_RFD_MONKEY_AMBASSADOR:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_MONKEY_AMBASSADOR.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_MONKEY_AMBASSADOR.getName()));
 					break;
 				case MENUOP_RFD_FINALE:
 					event.consume();
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_FINALE.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_FINALE.getName()));
 					break;
 			}
 		}
@@ -598,23 +476,23 @@ public class QuestHelperPlugin extends Plugin
 
 					if (PHOENIX_START_ZONE.contains(location))
 					{
-						startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_PHOENIX_GANG.getName()));
+						panel.startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_PHOENIX_GANG.getName()));
 					}
 					else
 					{
-						startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_BLACK_ARM_GANG.getName()));
+						panel.startUpQuest(quests.get(QuestHelperQuest.SHIELD_OF_ARRAV_BLACK_ARM_GANG.getName()));
 					}
 				}
 				else if (questName.equals("Recipe for Disaster"))
 				{
-					startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_START.getName()));
+					panel.startUpQuest(quests.get(QuestHelperQuest.RECIPE_FOR_DISASTER_START.getName()));
 				}
 				else
 				{
 					QuestHelper questHelper = quests.get(questName);
 					if (questHelper != null)
 					{
-						startUpQuest(questHelper);
+						panel.startUpQuest(questHelper);
 					}
 				}
 			}
@@ -634,74 +512,6 @@ public class QuestHelperPlugin extends Plugin
 		client.setMenuEntries(menuEntries);
 
 		return menuEntries;
-	}
-
-	public void startUpQuest(QuestHelper questHelper)
-	{
-		if (!(client.getGameState() == GameState.LOGGED_IN))
-		{
-			return;
-		}
-
-		shutDownQuest(true);
-
-		if (!questHelper.isCompleted())
-		{
-			selectedQuest = questHelper;
-			eventBus.register(selectedQuest);
-			if (isDeveloperMode())
-			{
-				selectedQuest.debugStartup(config);
-			}
-			selectedQuest.startUp(config);
-			if (selectedQuest.getCurrentStep() == null)
-			{
-				shutDownQuest(false);
-				return;
-			}
-			bankTagsMain.startUp();
-			SwingUtilities.invokeLater(() -> {
-				panel.removeQuest();
-				panel.addQuest(questHelper, true);
-				clientThread.invokeLater(() -> panel.updateItemRequirements(client, bankItems));
-			});
-		}
-		else
-		{
-			panel.removeQuest();
-			selectedQuest = null;
-		}
-	}
-
-	public void shutDownQuestFromSidebar()
-	{
-		if (selectedQuest != null)
-		{
-			selectedQuest.shutDown();
-			bankTagsMain.shutDown();
-			SwingUtilities.invokeLater(() -> panel.removeQuest());
-			eventBus.unregister(selectedQuest);
-			selectedQuest = null;
-		}
-	}
-
-	private void shutDownQuest(boolean shouldUpdateList)
-	{
-		if (selectedQuest != null)
-		{
-			selectedQuest.shutDown();
-			if (shouldUpdateList)
-			{
-				updateQuestList();
-			}
-			if (bankTagsMain != null)
-			{
-				bankTagsMain.shutDown();
-			}
-			SwingUtilities.invokeLater(() -> panel.removeQuest());
-			eventBus.unregister(selectedQuest);
-			selectedQuest = null;
-		}
 	}
 
 	private Map<String, QuestHelper> scanAndInstantiate(ClassLoader classLoader) throws IOException

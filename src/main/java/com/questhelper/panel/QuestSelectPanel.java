@@ -25,7 +25,6 @@
 package com.questhelper.panel;
 
 import com.questhelper.IconUtil;
-import com.questhelper.QuestHelperPlugin;
 import com.questhelper.questhelpers.QuestHelper;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -51,7 +50,7 @@ public class QuestSelectPanel extends JPanel
 	@Getter
 	private final QuestHelper questHelper;
 
-	public QuestSelectPanel(QuestHelperPlugin questHelperPlugin, QuestHelperPanel questHelperPanel, QuestHelper questHelper, QuestState questState)
+	public QuestSelectPanel(QuestHelperPanel questHelperPanel, QuestHelper questHelper, QuestState questState)
 	{
 		this.questHelper = questHelper;
 
@@ -69,11 +68,7 @@ public class QuestSelectPanel extends JPanel
 		{
 			JButton startButton = new JButton();
 			startButton.setIcon(START_ICON);
-			startButton.addActionListener(e ->
-			{
-				questHelperPlugin.setSidebarSelectedQuest(questHelper);
-				questHelperPanel.emptyBar();
-			});
+			startButton.addActionListener(e -> questHelperPanel.startQuest(questHelper));
 			add(startButton, BorderLayout.LINE_END);
 		}
 	}

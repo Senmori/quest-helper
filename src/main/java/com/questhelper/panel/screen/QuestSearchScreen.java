@@ -26,44 +26,58 @@
  */
 package com.questhelper.panel.screen;
 
+import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.QuestHelperQuest;
+import com.questhelper.panel.QuestContainer;
 import com.questhelper.panel.QuestHelperPanel;
 import com.questhelper.panel.QuestSelectPanel;
 import com.questhelper.panel.component.SearchPanel;
-import com.questhelper.panel.event.ScreenChange;
+import com.questhelper.panel.event.QuestChangedStatus;
+import com.questhelper.panel.factory.PanelFactory;
+import com.questhelper.panel.factory.QuestSelectPanelFactory;
+import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import java.awt.Color;
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.QuestState;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.util.Text;
 
 @Slf4j
-public class QuestSearchScreen extends QuestScreen
+public class QuestSearchScreen extends QuestScreen implements QuestContainer
 {
 	@Getter
 	private List<QuestSelectPanel> questSelectPanels = new ArrayList<>();
 
 	private final SearchPanel searchPanel;
 
-	public QuestSearchScreen(QuestHelperPlugin plugin, QuestHelperPanel rootPanel, SearchPanel searchPanel)
+	private final PanelFactory<QuestSelectPanel> panelFactory;
+
+	public QuestSearchScreen(QuestHelperPlugin plugin, QuestHelperPanel rootPanel)
 	{
 		super(plugin, rootPanel);
-		this.searchPanel = searchPanel;
+		this.searchPanel = rootPanel.getSearchPanel();
+		this.panelFactory = new QuestSelectPanelFactory(rootPanel);
 		searchPanel.setSearchBarDocumentListener(searchBar -> updateSearchFilter(searchBar.getText()));
 		setBorder(new EmptyBorder(8, 10, 0, 10));
 		setLayout(new DynamicGridLayout(0, 1, 0, 5));
@@ -72,9 +86,29 @@ public class QuestSearchScreen extends QuestScreen
 	}
 
 	@Subscribe
-	public void onScreenChange(ScreenChange event)
+	public void onQuestChangedStatus(QuestChangedStatus event)
 	{
+		boolean visible = event.getStatus() == QuestChangedStatus.Status.START;
+		searchPanel.getAllDropdownSections().setVisible(visible);
+	}
 
+	private final Collection<String> configEvents = Arrays.asList("orderListBy", "filterListBy", "questDifficulty", "showCompletedQuests");
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (event.getGroup().equals("questhelper") && configEvents.contains(event.getKey()))
+		{
+			updateQuestList(getRootPanel().getClientGameState());
+		}
+	}
+
+	@Subscribe
+	public void onGameStateChanged(final GameStateChanged event)
+	{
+		if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			SwingUtilities.invokeLater(() -> getRootPanel().updateQuestList());
+		}
 	}
 
 	public void emptySearchBar()
@@ -84,7 +118,7 @@ public class QuestSearchScreen extends QuestScreen
 
 	public void updateSearchFilter(String filter)
 	{
-		QuestHelper currentQuest = getRootPanel().getQuestOverviewPanel().currentQuest;
+		QuestHelper currentQuest = getRootPanel().getCurrentQuest();
 		if (currentQuest == null || (filter != null && !filter.isEmpty()) )
 		{
 			getRootPanel().setActiveDisplay(this);
@@ -111,10 +145,29 @@ public class QuestSearchScreen extends QuestScreen
 		addQuestsThatMatchSearchTerms(Arrays.asList(searchTerms));
 	}
 
+	public void updateQuestList(GameState state)
+	{
+		Client client = getPlugin().getClient();
+		if (state == GameState.LOGGED_IN)
+		{
+			QuestHelperConfig config = getPlugin().getConfig();
+			List<QuestHelper> filteredQuests = getPlugin().getQuests().values()
+				.stream()
+				.filter(config.filterListBy())
+				.filter(config.difficulty())
+				.filter(Quest::showCompletedQuests)
+				.sorted(config.orderListBy())
+				.collect(Collectors.toList());
+			Map<QuestHelperQuest, QuestState> questStates = getPlugin().getQuests().values()
+				.stream()
+				.collect(Collectors.toMap(QuestHelper::getQuest, q -> getRootPanel().getSafeQuestState(q.getQuest())));
+			updateQuests(filteredQuests, client.getGameState(), questStates);
+		}
+	}
+
 	@Override
 	public void updateQuests(List<QuestHelper> questHelpers, GameState gameState, Map<QuestHelperQuest, QuestState> completedQuests)
 	{
-		log.debug("QUEST SEARCH SCREEN UPDATE QUESTS");
 		searchPanel.getFilterDropdown().setSelectedItem(getPlugin().getConfig().filterListBy());
 		searchPanel.getDifficultyDropdown().setSelectedItem(getPlugin().getConfig().difficulty());
 		searchPanel.getOrderDropdown().setSelectedItem(getPlugin().getConfig().orderListBy());
@@ -124,7 +177,7 @@ public class QuestSearchScreen extends QuestScreen
 		for (QuestHelper questHelper : questHelpers)
 		{
 			QuestState questState = completedQuests.getOrDefault(questHelper.getQuest(),QuestState.NOT_STARTED);
-			questSelectPanels.add(new QuestSelectPanel(getPlugin(), getRootPanel(), questHelper, questState));
+			questSelectPanels.add(panelFactory.build(questHelper, questState));
 		}
 
 		Set<QuestHelperQuest> quests = completedQuests.keySet();

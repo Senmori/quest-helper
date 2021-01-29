@@ -27,11 +27,14 @@ package com.questhelper.panel;
 import com.questhelper.BankItems;
 import com.questhelper.IconUtil;
 import com.questhelper.QuestHelperPlugin;
+import com.questhelper.StreamUtil;
+import com.questhelper.panel.event.QuestChangedStatus;
 import com.questhelper.panel.screen.QuestScreen;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
 import com.questhelper.requirements.NoItemRequirement;
 import com.questhelper.requirements.Requirement;
+import com.questhelper.requirements.RequirementContainer;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.QuestStep;
 import java.awt.BorderLayout;
@@ -40,6 +43,9 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -57,7 +63,7 @@ import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.SwingUtil;
 
 @Slf4j
-public class QuestOverviewPanel extends QuestScreen
+public class QuestOverviewPanel extends QuestScreen implements RequirementContainer
 {
 	private final QuestHelperPlugin questHelperPlugin;
 	public QuestHelper currentQuest;
@@ -197,6 +203,7 @@ public class QuestOverviewPanel extends QuestScreen
 	public void addQuest(QuestHelper quest, boolean isActive)
 	{
 		currentQuest = quest;
+		getPlugin().getEventBus().post(new QuestChangedStatus.Start(currentQuest));
 
 		List<PanelDetails> steps = quest.getPanels();
 		QuestStep currentStep;
@@ -290,6 +297,7 @@ public class QuestOverviewPanel extends QuestScreen
 
 	public void removeQuest()
 	{
+		getPlugin().getEventBus().post(new QuestChangedStatus.Stopped(currentQuest));
 		actionsContainer.setVisible(false);
 		introPanel.setVisible(false);
 		questStepsContainer.removeAll();
@@ -306,7 +314,7 @@ public class QuestOverviewPanel extends QuestScreen
 
 	private void closeHelper()
 	{
-		questHelperPlugin.shutDownQuestFromSidebar();
+		getRootPanel().shutDownQuestFromSidebar();
 	}
 
 	void updateCollapseText()
@@ -462,6 +470,15 @@ public class QuestOverviewPanel extends QuestScreen
 	public Dimension getPreferredSize()
 	{
 		return new Dimension(PluginPanel.PANEL_WIDTH, super.getPreferredSize().height);
+	}
+
+	@Nonnull
+	@Override
+	public List<Requirement> getRequirements()
+	{
+		List<Requirement> req1 = StreamUtil.getRequirements(requirementPanels);
+		List<Requirement> req2 = StreamUtil.getRequirements(questStepPanelList);
+		return Stream.concat(req1.stream(), req2.stream()).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 	}
 
 	@Override

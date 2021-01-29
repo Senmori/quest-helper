@@ -24,24 +24,13 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.screen;
+package com.questhelper.panel.factory;
 
-import com.questhelper.QuestHelperPlugin;
-import com.questhelper.panel.FixedWidthPanel;
-import com.questhelper.panel.QuestHelperPanel;
-import lombok.AccessLevel;
-import lombok.Getter;
+import com.questhelper.questhelpers.QuestHelper;
+import java.awt.Component;
+import net.runelite.api.QuestState;
 
-public abstract class QuestScreen extends FixedWidthPanel
+public interface PanelFactory<T extends Component>
 {
-	@Getter(AccessLevel.PROTECTED)
-	private final QuestHelperPlugin plugin;
-	@Getter(AccessLevel.PROTECTED)
-	private final QuestHelperPanel rootPanel;
-
-	protected QuestScreen(QuestHelperPlugin plugin, QuestHelperPanel rootPanel)
-	{
-		this.plugin = plugin;
-		this.rootPanel = rootPanel;
-	}
+	T build(QuestHelper quest, QuestState questState);
 }

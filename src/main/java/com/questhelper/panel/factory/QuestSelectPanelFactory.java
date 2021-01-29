@@ -24,71 +24,29 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.component;
+package com.questhelper.panel.factory;
 
-import com.questhelper.QuestHelperPlugin;
-import com.questhelper.QuestHelperQuest;
 import com.questhelper.panel.QuestHelperPanel;
 import com.questhelper.panel.QuestSelectPanel;
-import com.questhelper.panel.screen.QuestScreen;
 import com.questhelper.questhelpers.QuestHelper;
-import java.awt.Component;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import javax.swing.border.EmptyBorder;
 import lombok.Getter;
-import net.runelite.api.GameState;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.QuestState;
-import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.util.Text;
 
-public class QuestListPanel extends QuestScreen
+
+@RequiredArgsConstructor
+public class QuestSelectPanelFactory implements PanelFactory<QuestSelectPanel>
 {
 	@Getter
-	private final List<QuestSelectPanel> questSelectPanels = new ArrayList<>();
+	private final List<String> keywords = new ArrayList<>();
 
-	public QuestListPanel(QuestHelperPlugin plugin, QuestHelperPanel rootPanel)
-	{
-		super(plugin, rootPanel);
-
-		setBorder(new EmptyBorder(8, 10, 0, 10));
-		setLayout(new DynamicGridLayout(0, 1, 0, 5));
-		setAlignmentX(Component.LEFT_ALIGNMENT);
-	}
+	private final QuestHelperPanel rootPanel;
 
 	@Override
-	public void updateQuests(List<QuestHelper> questHelpers, GameState gameState, Map<QuestHelperQuest, QuestState> completedQuests)
+	public QuestSelectPanel build(QuestHelper quest, QuestState questState)
 	{
-		questSelectPanels.forEach(this::remove);
-		questSelectPanels.clear();
-		for (QuestHelper questHelper : questHelpers)
-		{
-			QuestState questState = completedQuests.getOrDefault(questHelper.getQuest(),QuestState.NOT_STARTED);
-			questSelectPanels.add(new QuestSelectPanel(getPlugin(), getRootPanel(), questHelper, questState));
-		}
-	}
-
-	public boolean isEmpty()
-	{
-		return questSelectPanels.isEmpty();
-	}
-
-	public void removeAllQuests()
-	{
-		questSelectPanels.forEach(this::remove);
-	}
-
-	public void addAllQuests()
-	{
-		questSelectPanels.forEach(this::add);
-	}
-
-	public void addQuestsThatMatchSearchTerms(List<String> searchTerms)
-	{
-		questSelectPanels
-			.stream()
-			.filter(panel -> Text.matchesSearchTerms(searchTerms, panel.getKeywords()))
-			.forEach(this::add);
+		return new QuestSelectPanel(rootPanel, quest, questState);
 	}
 }

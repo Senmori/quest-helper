@@ -26,22 +26,16 @@
  */
 package com.questhelper.panel.screen;
 
-import net.runelite.client.eventbus.EventBus;
+import com.questhelper.QuestHelperPlugin;
+import com.questhelper.panel.QuestHelperPanel;
+import java.util.function.BiFunction;
 
-public interface ScreenFactory
+/**
+ * Functional interface that is used for creating a {@link QuestScreen}.
+ */
+@FunctionalInterface
+public interface ScreenFactory<T extends QuestScreen> extends BiFunction<QuestHelperPlugin, QuestHelperPanel, T>
 {
-	/**
-	 * Register a {@link QuestScreen} with the plugin's {@link net.runelite.client.eventbus.EventBus}.
-	 *
-	 * @param eventBus the event bus to register the screen wtih
-	 * @param screen screen to register
-	 * @return the screen after it has been registered with the event bus
-	 */
-	static <T extends QuestScreen> T registerScreen(EventBus eventBus, T screen) {
-		if (screen != null)
-		{
-			eventBus.register(screen);
-		}
-		return screen;
-	}
+	@Override
+	T apply(QuestHelperPlugin questHelperPlugin, QuestHelperPanel questHelperPanel);
 }
