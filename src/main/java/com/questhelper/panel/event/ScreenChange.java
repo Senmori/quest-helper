@@ -24,52 +24,15 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel;
+package com.questhelper.panel.event;
 
-import com.questhelper.QuestHelperPlugin;
-import com.questhelper.panel.event.ScreenChange;
 import com.questhelper.panel.screen.QuestScreen;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import javax.annotation.Nonnull;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import net.runelite.client.util.SwingUtil;
+import lombok.AllArgsConstructor;
 
-class ActiveContainer extends JScrollPane
+@AllArgsConstructor
+public class ScreenChange
 {
-	private final FixedWidthPanel currentDisplayPanel = new FixedWidthPanel();
-	private QuestScreen currentScreen = null;
-	private final QuestScreen _defaultScreen;
-
-	private final QuestHelperPlugin plugin;
-	protected ActiveContainer(QuestHelperPlugin plugin, final @Nonnull QuestScreen defaultScreen)
-	{
-		this.plugin = plugin;
-		this._defaultScreen = defaultScreen;
-		currentDisplayPanel.setLayout(new BorderLayout());
-		setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		super.setViewportView(currentDisplayPanel);
-	}
-
-	public QuestScreen getCurrentScreen()
-	{
-		return currentScreen == null ? _defaultScreen : currentScreen;
-	}
-
-	@Override
-	public void setViewportView(Component view)
-	{
-		// don't let screens change it
-	}
-
-
-	public void setScreen(QuestScreen screen)
-	{
-		plugin.getEventBus().post(new ScreenChange(screen, currentScreen, _defaultScreen));
-		SwingUtil.fastRemoveAll(currentDisplayPanel);
-		this.currentScreen = screen == null ? _defaultScreen : screen;
-		currentDisplayPanel.add(currentScreen, BorderLayout.NORTH);
-		revalidate();
-	}
+	private final QuestScreen newScreen;
+	private final QuestScreen oldScreen;
+	private final QuestScreen defaultScreen;
 }

@@ -26,7 +26,22 @@
  */
 package com.questhelper.panel.screen;
 
-public interface ScreenChangeListener
+import net.runelite.client.eventbus.EventBus;
+
+public interface ScreenFactory
 {
-	void onScreenChange(QuestScreen newScreen, QuestScreen oldScreen);
+	/**
+	 * Register a {@link QuestScreen} with the plugin's {@link net.runelite.client.eventbus.EventBus}.
+	 *
+	 * @param eventBus the event bus to register the screen wtih
+	 * @param screen screen to register
+	 * @return the screen after it has been registered with the event bus
+	 */
+	static <T extends QuestScreen> T registerScreen(EventBus eventBus, T screen) {
+		if (screen != null)
+		{
+			eventBus.register(screen);
+		}
+		return screen;
+	}
 }

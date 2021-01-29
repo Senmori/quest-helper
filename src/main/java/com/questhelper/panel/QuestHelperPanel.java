@@ -32,6 +32,7 @@ import com.questhelper.panel.component.SearchPanel;
 import com.questhelper.panel.component.TitlePanel;
 import com.questhelper.panel.screen.QuestScreen;
 import com.questhelper.panel.screen.QuestSearchScreen;
+import com.questhelper.panel.screen.ScreenFactory;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.steps.QuestStep;
@@ -84,6 +85,7 @@ public class QuestHelperPanel extends PluginPanel
 
 	// ui-upgrade fields
 	private final TitlePanel titlePanel = new TitlePanel("Quest Helper");
+	@Getter
 	private final SearchPanel searchPanel;
 	@Getter
 	private final ActiveContainer activeContainer;
@@ -111,15 +113,12 @@ public class QuestHelperPanel extends PluginPanel
 		add(introDetailsPanel, BorderLayout.NORTH);
 
 		/* Screens */
-		questOverviewPanel = new QuestOverviewPanel(plugin, this);
-		questSearchScreen = new QuestSearchScreen(plugin,this, searchPanel);
+		questOverviewPanel = ScreenFactory.registerScreen(eventBus, new QuestOverviewPanel(plugin, this));
+		questSearchScreen = ScreenFactory.registerScreen(eventBus,new QuestSearchScreen(plugin, this, searchPanel));
 		this.activeContainer = new ActiveContainer(plugin, questSearchScreen);
-		activeContainer.addListener((newScreen, old) -> {
-			if (newScreen == null)
-			{
-				searchPanel.getAllDropdownSections().setVisible(true);
-			}
-		});
+
+		plugin.getEventBus().register(questOverviewPanel);
+		plugin.getEventBus().register(questSearchScreen);
 
 		add(activeContainer, BorderLayout.CENTER);
 		setActiveDisplay(questSearchScreen);

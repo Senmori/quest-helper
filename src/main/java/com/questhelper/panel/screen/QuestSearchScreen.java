@@ -31,6 +31,7 @@ import com.questhelper.QuestHelperQuest;
 import com.questhelper.panel.QuestHelperPanel;
 import com.questhelper.panel.QuestSelectPanel;
 import com.questhelper.panel.component.SearchPanel;
+import com.questhelper.panel.event.ScreenChange;
 import com.questhelper.questhelpers.QuestHelper;
 import java.awt.Color;
 import java.awt.Component;
@@ -46,6 +47,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.GameState;
 import net.runelite.api.QuestState;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.util.Text;
@@ -67,6 +69,12 @@ public class QuestSearchScreen extends QuestScreen
 		setLayout(new DynamicGridLayout(0, 1, 0, 5));
 		setAlignmentX(Component.LEFT_ALIGNMENT);
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
+	}
+
+	@Subscribe
+	public void onScreenChange(ScreenChange event)
+	{
+
 	}
 
 	public void emptySearchBar()
