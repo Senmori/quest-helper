@@ -27,6 +27,7 @@
 package com.questhelper.panel.component;
 
 import com.questhelper.BankItems;
+import com.questhelper.ClientThreadOperation;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.StreamUtil;
 import com.questhelper.panel.PanelDetails;
@@ -52,7 +53,7 @@ import net.runelite.api.Client;
 public class QuestStepContainer extends JPanel implements RequirementContainer
 {
 	@Getter
-	private final List<QuestStepPanel> questStepPanels = new LinkedList<>();
+	private final List<QuestStepPanel> questStepPanelList = new LinkedList<>();
 
 	private final QuestHelperPlugin plugin;
 	private final QuestHelperPanel rootPanel;
@@ -71,13 +72,13 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 		{
 			QuestStepPanel newStep = new QuestStepPanel(panel, currentStep);
 			boolean hasLockingSteps = panel.getLockingQuestSteps() != null;
-			int var = rootPanel.getSafeQuestVar(currentQuest.getQuest()); // thread-safe even if we're not on the client thread
+			int var = ClientThreadOperation.getQuestVar(plugin, currentQuest.getQuest()); // thread-safe even if we're not on the client thread
 			boolean hasVars = panel.getVars() == null || panel.getVars().contains(var);
 			if (hasLockingSteps && hasVars)
 			{
 				newStep.setLockable(true);
 			}
-			questStepPanels.add(newStep);
+			questStepPanelList.add(newStep);
 			add(newStep);
 			newStep.addMouseListener(mouseListener);
 			parent.repaint();
@@ -89,13 +90,13 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 	public void setVisible(boolean visible)
 	{
 		super.setVisible(visible);
-		questStepPanels.forEach(p -> p.setVisible(visible));
+		questStepPanelList.forEach(p -> p.setVisible(visible));
 	}
 
 	public void updateHighlight(QuestStep newStep, QuestHelper currentQuest)
 	{
 		AtomicBoolean highlighted = new AtomicBoolean(false);
-		questStepPanels.forEach(panel -> {
+		questStepPanelList.forEach(panel -> {
 			highlighted.set(false);
 			boolean hasLockingSteps = panel.getPanelDetails().getLockingQuestSteps() != null;
 			boolean questHasVar = currentQuest != null && panel.getPanelDetails().getVars().contains(currentQuest.getVar());
@@ -119,11 +120,11 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 
 	public void updateSteps()
 	{
-		if (questStepPanels.isEmpty())
+		if (questStepPanelList.isEmpty())
 		{
 			return;
 		}
-		questStepPanels.forEach(panel -> {
+		questStepPanelList.forEach(panel -> {
 			for (QuestStep step : panel.getSteps())
 			{
 				JLabel label = panel.getStepsLabels().get(step);
@@ -137,31 +138,31 @@ public class QuestStepContainer extends JPanel implements RequirementContainer
 
 	public void updateLocks()
 	{
-		questStepPanels.forEach(QuestStepPanel::updateLock);
+		questStepPanelList.forEach(QuestStepPanel::updateLock);
 	}
 
 	@Override
 	public void removeAll()
 	{
 		super.removeAll();
-		questStepPanels.clear();
+		questStepPanelList.clear();
 	}
 
 	public boolean isAllCollapsed()
 	{
-		return questStepPanels.stream().filter(QuestStepPanel::isCollapsed).count() == questStepPanels.size();
+		return questStepPanelList.stream().filter(QuestStepPanel::isCollapsed).count() == questStepPanelList.size();
 	}
 
 	@Override
 	public void updateRequirements(@Nonnull Client client, @Nonnull BankItems bankItems)
 	{
-		questStepPanels.forEach(panel -> panel.updateRequirements(client, bankItems));
+		questStepPanelList.forEach(panel -> panel.updateRequirements(client, bankItems));
 	}
 
 	@Nonnull
 	@Override
 	public List<Requirement> getRequirements()
 	{
-		return StreamUtil.getRequirements(questStepPanels);
+		return StreamUtil.getRequirements(questStepPanelList);
 	}
 }

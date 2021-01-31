@@ -24,37 +24,39 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-package com.questhelper;
+package com.questhelper.panel.event;
 
 import com.questhelper.questhelpers.QuestHelper;
-import com.questhelper.requirements.Requirement;
-import com.questhelper.requirements.RequirementContainer;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.Nonnull;
-import net.runelite.api.Client;
-import net.runelite.api.QuestState;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-public class StreamUtil
+@RequiredArgsConstructor
+@Getter
+public class QuestChangedStatus
 {
-	@Nonnull
-	public static List<Requirement> getRequirements(Stream<? extends RequirementContainer> stream)
+	private final QuestHelper quest;
+	private final QuestChangedStatus.Status status;
+
+	public enum Status
 	{
-		return stream.map(RequirementContainer::getRequirements).flatMap(Collection::stream).collect(Collectors.toList());
+		START,
+		STOPPED,
+		;
 	}
 
-	@Nonnull
-	public static List<Requirement> getRequirements(Collection< ? extends RequirementContainer> list)
+	public static class Start extends QuestChangedStatus
 	{
-		return StreamUtil.getRequirements(list.stream());
+		public Start(QuestHelper quest)
+		{
+			super(quest, Status.START);
+		}
 	}
 
-	public static Map<QuestHelperQuest, QuestState> toQuestMap(Stream<QuestHelper> stream, Client client)
+	public static class Stopped extends QuestChangedStatus
 	{
-		return stream.collect(Collectors.toMap(QuestHelper::getQuest, questHelper -> questHelper.getState(client)));
+		public Stopped(QuestHelper quest)
+		{
+			super(quest, Status.STOPPED);
+		}
 	}
 }

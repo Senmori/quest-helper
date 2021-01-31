@@ -66,6 +66,9 @@ class ActiveContainer extends JScrollPane
 
 	public void setScreen(QuestScreen screen)
 	{
+		if (screen == currentScreen) {
+			return; // we aren't changing screens; ignore it
+		}
 		plugin.getEventBus().post(new ScreenChange(screen, currentScreen, _defaultScreen));
 		SwingUtil.fastRemoveAll(currentDisplayPanel);
 		this.currentScreen = screen == null ? _defaultScreen : screen;

@@ -28,8 +28,10 @@ import com.questhelper.BankItems;
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.QuestHelperQuest;
+import com.questhelper.StreamUtil;
 import com.questhelper.panel.component.SearchPanel;
 import com.questhelper.panel.component.TitlePanel;
+import com.questhelper.panel.event.ScreenChange;
 import com.questhelper.panel.screen.QuestScreen;
 import com.questhelper.panel.screen.QuestSearchScreen;
 import com.questhelper.panel.screen.ScreenFactory;
@@ -45,13 +47,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -96,7 +94,7 @@ public class QuestHelperPanel extends PluginPanel
 	private final BankItems bankItems = new BankItems();
 	private final Client client;
 	private final ClientThread clientThread;
-	private GameState currentClientGameState;
+	private GameState currentClientGameState = GameState.UNKNOWN;
 
 	// Quest vars ->
 	private QuestHelper selectedQuest, sidebarSelectedQuest;
@@ -152,7 +150,7 @@ public class QuestHelperPanel extends PluginPanel
 		}
 		if (event.getItemContainer() == client.getItemContainer(InventoryID.INVENTORY))
 		{
-			clientThread.invokeLater(() -> updateRequirements(client, bankItems));
+			updateRequirements(client, bankItems);
 		}
 	}
 
@@ -184,7 +182,7 @@ public class QuestHelperPanel extends PluginPanel
 
 		if (event.getGroup().equals("questhelper") && configEvents.contains(event.getKey()))
 		{
-			clientThread.invokeLater(this::updateQuestList);
+			updateQuestList();
 		}
 	}
 
@@ -192,18 +190,19 @@ public class QuestHelperPanel extends PluginPanel
 	{
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
-			QuestHelperConfig config = plugin.getConfig();
-			List<QuestHelper> filteredQuests = plugin.getQuests().values()
-				.stream()
-				.filter(config.filterListBy())
-				.filter(config.difficulty())
-				.filter(Quest::showCompletedQuests)
-				.sorted(config.orderListBy())
-				.collect(Collectors.toList());
-			Map<QuestHelperQuest, QuestState> questStates = plugin.getQuests().values()
-				.stream()
-				.collect(Collectors.toMap(QuestHelper::getQuest, q -> q.getState(client)));
-			SwingUtilities.invokeLater(() -> updateQuests(filteredQuests, client.getGameState(), questStates));
+			clientThread.invoke(() -> {
+				QuestHelperConfig config = plugin.getConfig();
+				GameState state = client.getGameState();
+				List<QuestHelper> filteredQuests = plugin.getQuests().values()
+					.stream()
+					.filter(config.filterListBy())
+					.filter(config.difficulty())
+					.filter(Quest::showCompletedQuests)
+					.sorted(config.orderListBy())
+					.collect(Collectors.toList());
+				Map<QuestHelperQuest, QuestState> questStates = StreamUtil.toQuestMap(plugin.getQuests().values().stream(), client);
+				SwingUtilities.invokeLater(() -> updateQuests(filteredQuests, state, questStates));
+			});
 		}
 	}
 
@@ -233,6 +232,7 @@ public class QuestHelperPanel extends PluginPanel
 		if (loadQuestList)
 		{
 			loadQuestList = false;
+			SwingUtilities.invokeLater(this::updateQuestList);
 		}
 	}
 
@@ -249,6 +249,14 @@ public class QuestHelperPanel extends PluginPanel
 		{
 			shutDownQuest(true);
 		}
+	}
+
+	@Subscribe
+	public void onScreenChange(ScreenChange event)
+	{
+		String old = event.getOldScreen().getClass().getSimpleName();
+		String newScreen = event.getNewScreen().getClass().getSimpleName();
+		log.debug("Changed Screens: (New -> " + newScreen + ") --> (Old -> " + old + ")");
 	}
 
 	public void startUpQuest(QuestHelper questHelper)
@@ -276,8 +284,8 @@ public class QuestHelperPanel extends PluginPanel
 				return;
 			}
 			plugin.getBankTagsMain().startUp();
+			revalidate();
 			SwingUtilities.invokeLater(() -> {
-				removeQuest();
 				addQuest(questHelper, true);
 				clientThread.invokeLater(() -> updateItemRequirements(client, bankItems));
 			});
@@ -295,7 +303,7 @@ public class QuestHelperPanel extends PluginPanel
 		{
 			selectedQuest.shutDown();
 			plugin.getBankTagsMain().shutDown();
-			SwingUtilities.invokeLater(this::removeQuest);
+			removeQuest();
 			plugin.getEventBus().unregister(selectedQuest);
 			selectedQuest = null;
 		}
@@ -314,7 +322,7 @@ public class QuestHelperPanel extends PluginPanel
 			{
 				plugin.getBankTagsMain().shutDown();
 			}
-			SwingUtilities.invokeLater(this::removeQuest);
+			removeQuest();
 			plugin.getEventBus().unregister(selectedQuest);
 			selectedQuest = null;
 		}
@@ -323,54 +331,12 @@ public class QuestHelperPanel extends PluginPanel
 
 	private void updateQuests(List<QuestHelper> quests, GameState state, Map<QuestHelperQuest, QuestState> questStates)
 	{
-		 questContainers.forEach(qc -> qc.updateQuests(quests, state, questStates));
+		 SwingUtilities.invokeLater(() -> questContainers.forEach(qc -> qc.updateQuestPanels(quests, state, questStates)));
 	}
 
 	private void updateRequirements(Client client, BankItems bankItems)
 	{
-		requirementContainers.forEach(rc -> rc.updateRequirements(client, bankItems));
-	}
-
-	/**
-	 * Get the var of a quest while off the client thread.
-	 * <br>
-	 * This method swallows exceptions.
-	 *
-	 * @param quest the quest to query
-	 * @return the current var of the quest, or {@link Integer#MIN_VALUE} if there was a problem.
-	 */
-	public synchronized int getSafeQuestVar(QuestHelperQuest quest)
-	{
-		Integer var = runOnClientThread(c -> quest.getVar(client), Integer.MIN_VALUE);
-		return var == null ? Integer.MIN_VALUE : var;
-	}
-
-	@Nullable
-	public synchronized <T> T runOnClientThread(Function<Client, T> func, T defaultValue)
-	{
-		FutureTask<T> task = new FutureTask<>(() -> func.apply(client));
-		clientThread.invoke(task);
-		T var = null;
-		try
-		{
-			var = task.get();
-		}
-		catch (InterruptedException | ExecutionException e)
-		{
-			log.error("Error running operation on client thread. Called from " + Thread.currentThread().getStackTrace()[1].getClassName() + ".", e);
-			return defaultValue;
-		}
-		if (var == null) {
-			var = defaultValue;
-		}
-		return var;
-	}
-
-	@Nonnull
-	public synchronized QuestState getSafeQuestState(QuestHelperQuest quest)
-	{
-		QuestState questState = runOnClientThread(c -> quest.getState(client), QuestState.NOT_STARTED);
-		return questState == null ? QuestState.NOT_STARTED : questState;
+		clientThread.invoke(() -> requirementContainers.forEach(rc -> rc.updateRequirements(client, bankItems)));
 	}
 
 	public GameState getClientGameState()
@@ -412,7 +378,6 @@ public class QuestHelperPanel extends PluginPanel
 	 **********************
 	 */
 
-	//TODO: This method stays after some rework
 	public void addQuest(QuestHelper quest, boolean isActive)
 	{
 		log.debug("Quest added: " + quest.getQuest().getName() + " - Active: " + isActive);
@@ -421,14 +386,14 @@ public class QuestHelperPanel extends PluginPanel
 
 		questOverviewPanel.addQuest(quest, isActive);
 
-		repaint();
 		revalidate();
+		repaint();
 	}
 
 	@Deprecated
 	public void updateQuestsExternal(List<QuestHelper> quests, GameState state, Map<QuestHelperQuest, QuestState> questStates)
 	{
-		questContainers.forEach(qc -> qc.updateQuests(quests, state, questStates));
+		updateQuests(quests, state, questStates);
 	}
 
 	public void updateSteps()
@@ -454,12 +419,14 @@ public class QuestHelperPanel extends PluginPanel
 
 	public void removeQuest()
 	{
-		searchPanel.getAllDropdownSections().setVisible(true);
-		setActiveDisplay(questSearchScreen);
-		questOverviewPanel.removeQuest();
+		SwingUtilities.invokeLater(() -> {
+			searchPanel.getAllDropdownSections().setVisible(true);
+			setActiveDisplay(questSearchScreen);
+			questOverviewPanel.removeQuest();
 
-		repaint();
-		revalidate();
+			revalidate();
+			repaint();
+		});
 	}
 
 	public void updateItemRequirements(Client client, BankItems bankItems)

@@ -24,37 +24,16 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+package com.questhelper.panel;
 
-package com.questhelper;
-
+import com.questhelper.QuestHelperQuest;
 import com.questhelper.questhelpers.QuestHelper;
-import com.questhelper.requirements.Requirement;
-import com.questhelper.requirements.RequirementContainer;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.Nonnull;
-import net.runelite.api.Client;
+import net.runelite.api.GameState;
 import net.runelite.api.QuestState;
 
-public class StreamUtil
+public interface QuestContainer
 {
-	@Nonnull
-	public static List<Requirement> getRequirements(Stream<? extends RequirementContainer> stream)
-	{
-		return stream.map(RequirementContainer::getRequirements).flatMap(Collection::stream).collect(Collectors.toList());
-	}
-
-	@Nonnull
-	public static List<Requirement> getRequirements(Collection< ? extends RequirementContainer> list)
-	{
-		return StreamUtil.getRequirements(list.stream());
-	}
-
-	public static Map<QuestHelperQuest, QuestState> toQuestMap(Stream<QuestHelper> stream, Client client)
-	{
-		return stream.collect(Collectors.toMap(QuestHelper::getQuest, questHelper -> questHelper.getState(client)));
-	}
+	void updateQuestPanels(List<QuestHelper> quests, GameState gameState, Map<QuestHelperQuest, QuestState> questStates);
 }
