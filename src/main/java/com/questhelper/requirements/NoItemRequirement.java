@@ -63,6 +63,12 @@ public class NoItemRequirement extends ItemRequirement
 	}
 
 	@Override
+	public boolean showQuantity()
+	{
+		return false;
+	}
+
+	@Override
 	public String getDisplayText()
 	{
 		return "Nothing in your " + slot.getName();

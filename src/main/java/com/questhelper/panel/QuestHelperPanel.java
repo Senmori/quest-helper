@@ -26,9 +26,15 @@ package com.questhelper.panel;
 
 import com.questhelper.BankItems;
 import com.questhelper.Icon;
+import com.questhelper.QuestController;
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
 import com.questhelper.QuestHelperQuest;
+import com.questhelper.QuestModel;
+import com.questhelper.panel.component.SearchPanel;
+import com.questhelper.panel.screen.FixedWidthPanel;
+import com.questhelper.panel.screen.QuestScreen;
+import com.questhelper.panel.screen.QuestSearchScreen;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.steps.QuestStep;
@@ -53,6 +59,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicButtonUI;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.QuestState;
@@ -68,6 +75,7 @@ import net.runelite.client.util.Text;
 @Slf4j
 public class QuestHelperPanel extends PluginPanel
 {
+	@Getter
 	private final QuestOverviewPanel questOverviewPanel;
 	private final FixedWidthPanel questOverviewWrapper = new FixedWidthPanel();
 
@@ -85,7 +93,7 @@ public class QuestHelperPanel extends PluginPanel
 
 	private final ArrayList<QuestSelectPanel> questSelectPanels = new ArrayList<>();
 
-	QuestHelperPlugin questHelperPlugin;
+	private final QuestHelperPlugin questHelperPlugin;
 
 	private static final ImageIcon DISCORD_ICON;
 
@@ -94,14 +102,25 @@ public class QuestHelperPanel extends PluginPanel
 		DISCORD_ICON = Icon.DISCORD.getIcon(img -> ImageUtil.resizeImage(img, 16, 16));
 	}
 
-	public QuestHelperPanel(QuestHelperPlugin questHelperPlugin)
+	// New fields
+	@Getter
+	private final SearchPanel searchPanel;
+	private final ActiveContainer activeContainer;
+
+	private final QuestModel questModel;
+	private final QuestController questController;
+
+	public QuestHelperPanel(QuestHelperPlugin plugin, QuestModel questModel, QuestController questController)
 	{
 		super(false);
-
-		this.questHelperPlugin = questHelperPlugin;
+		this.questHelperPlugin = plugin;
+		this.questController = questController;
+		this.questModel = questModel;
 
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setLayout(new BorderLayout());
+
+		this.searchPanel = new SearchPanel(plugin);
 
 		/* Setup overview panel */
 		JPanel titlePanel = new JPanel();
@@ -218,11 +237,19 @@ public class QuestHelperPanel extends PluginPanel
 		add(scrollableContainer, BorderLayout.CENTER);
 
 		/* Layout */
-		questOverviewPanel = new QuestOverviewPanel(questHelperPlugin);
+		questOverviewPanel = registerScreen(new QuestOverviewPanel(plugin, this, questModel, questController));
+		QuestSearchScreen questSearchScreen = registerScreen(new QuestSearchScreen(plugin, this, questModel, questController));
+		this.activeContainer = new ActiveContainer(plugin, questSearchScreen);
 
 		questOverviewWrapper.setLayout(new BorderLayout());
 		questOverviewWrapper.add(questOverviewPanel, BorderLayout.NORTH);
 	}
+
+	public final void setActiveDisplay(QuestScreen screen)
+	{
+		activeContainer.setScreen(screen);
+	}
+
 
 	private void onSearchBarChanged()
 	{
@@ -384,5 +411,12 @@ public class QuestHelperPanel extends PluginPanel
 	public void updateItemRequirements(Client client, BankItems bankItems)
 	{
 		questOverviewPanel.updateRequirements(client, bankItems);
+	}
+
+	public <T extends QuestScreen> T registerScreen(T screen)
+	{
+		questHelperPlugin.getEventBus().register(screen);
+		//TODO: Screen Filters
+		return screen;
 	}
 }

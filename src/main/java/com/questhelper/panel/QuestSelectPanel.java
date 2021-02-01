@@ -71,7 +71,7 @@ public class QuestSelectPanel extends JPanel
 			startButton.setIcon(START_ICON);
 			startButton.addActionListener(e ->
 			{
-				questHelperPlugin.setSidebarSelectedQuest(questHelper);
+				questHelperPlugin.setSidebarSelectedQuest(questHelper); //TODO: start quest method here
 				questHelperPanel.emptyBar();
 			});
 			add(startButton, BorderLayout.LINE_END);

@@ -53,6 +53,12 @@ public final class DropdownRenderer extends DefaultListCellRenderer
 
 		setText(Text.titleCase((Enum) o));
 
+		if (o instanceof ToolTipProvider)
+		{
+			String tip = ((ToolTipProvider)o).getTooltip();
+			list.setToolTipText(tip.isEmpty() ? null : tip);
+		}
+
 		return this;
 	}
 }

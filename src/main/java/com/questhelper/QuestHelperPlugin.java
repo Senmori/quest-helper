@@ -152,6 +152,7 @@ public class QuestHelperPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 
+	@Getter
 	@Inject
 	private EventBus eventBus;
 
@@ -244,7 +245,7 @@ public class QuestHelperPlugin extends Plugin
 
 		final BufferedImage icon = Icon.QUEST_ICON.getImage();
 
-		panel = new QuestHelperPanel(this);
+		panel = new QuestHelperPanel(this, questModel, questController);
 		navButton = NavigationButton.builder()
 			.tooltip("Quest Helper")
 			.icon(icon)

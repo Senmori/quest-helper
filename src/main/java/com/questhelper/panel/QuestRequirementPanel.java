@@ -25,13 +25,15 @@
 package com.questhelper.panel;
 
 import com.questhelper.Icon;
+import com.questhelper.RequirementContainer;
 import com.questhelper.requirements.ItemRequirement;
 import com.questhelper.requirements.Requirement;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Insets;
-import javax.swing.ImageIcon;
+import java.util.Collections;
+import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -39,14 +41,11 @@ import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import lombok.Setter;
 
-public class QuestRequirementPanel extends JPanel
+public class QuestRequirementPanel extends JPanel implements RequirementContainer
 {
-	private static final ImageIcon INFO_ICON = Icon.INFO_ICON.getIcon();
-
 	@Getter
 	@Setter
 	private JLabel label;
-
 
 	@Getter
 	private final Requirement requirement;
@@ -86,7 +85,7 @@ public class QuestRequirementPanel extends JPanel
 
 	private void addButtonToPanel(String tooltipText)
 	{
-		JButton b = new JButton(INFO_ICON);
+		JButton b = new JButton(Icon.INFO_ICON.getIcon());
 		b.setPreferredSize(new Dimension(10, 10));
 		b.setToolTipText(tooltipText);
 		b.setBorderPainted(false);
@@ -95,6 +94,12 @@ public class QuestRequirementPanel extends JPanel
 		b.setContentAreaFilled(false);
 		b.setMargin(new Insets(0, 0, 0, 0));
 		add(b);
+	}
+
+	@Override
+	public List<Requirement> getRequirements()
+	{
+		return Collections.singletonList(requirement);
 	}
 }
 

@@ -26,10 +26,12 @@ package com.questhelper.panel;
 
 import com.questhelper.BankItems;
 import com.questhelper.Icon;
+import com.questhelper.QuestController;
 import com.questhelper.QuestHelperPlugin;
+import com.questhelper.QuestModel;
+import com.questhelper.panel.screen.QuestScreen;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.ItemRequirement;
-import com.questhelper.requirements.NoItemRequirement;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.QuestStep;
@@ -37,8 +39,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -55,7 +55,7 @@ import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.SwingUtil;
 
-public class QuestOverviewPanel extends JPanel
+public class QuestOverviewPanel extends QuestScreen
 {
 	private final QuestHelperPlugin questHelperPlugin;
 	public QuestHelper currentQuest;
@@ -92,10 +92,16 @@ public class QuestOverviewPanel extends JPanel
 
 	private final List<QuestRequirementPanel> requirementPanels = new ArrayList<>();
 
-	public QuestOverviewPanel(QuestHelperPlugin questHelperPlugin)
+	/** NEW FIELDS */
+	private final QuestModel questModel;
+	private final QuestController questController;
+
+	public QuestOverviewPanel(QuestHelperPlugin plugin, QuestHelperPanel rootPanel, QuestModel questModel, QuestController controller)
 	{
-		super();
-		this.questHelperPlugin = questHelperPlugin;
+		super(plugin, rootPanel);
+		this.questHelperPlugin = plugin;
+		this.questModel = questModel;
+		this.questController = controller;
 
 		BoxLayout boxLayout = new BoxLayout(this, BoxLayout.Y_AXIS);
 		setLayout(boxLayout);
@@ -218,34 +224,18 @@ public class QuestOverviewPanel extends JPanel
 			for (PanelDetails panelDetail : steps)
 			{
 				QuestStepPanel newStep = new QuestStepPanel(panelDetail, currentStep);
-				if (panelDetail.getLockingQuestSteps() != null &&
-					(panelDetail.getVars() == null
-						|| panelDetail.getVars().contains(currentQuest.getVar())))
+				boolean hasLockingSteps = panelDetail.getLockingQuestSteps() != null;
+				boolean panelContainsVar = panelDetail.getVars() == null || panelDetail.getVars().contains(questModel.getQuestVar());
+				if (hasLockingSteps && panelContainsVar)
 				{
 					newStep.setLockable(true);
 				}
 				questStepPanelList.add(newStep);
 				questStepsContainer.add(newStep);
-				newStep.addMouseListener(new MouseAdapter()
-				{
-					@Override
-					public void mouseClicked(MouseEvent e)
-					{
-						if (e.getButton() == MouseEvent.BUTTON1)
-						{
-							if (newStep.isCollapsed())
-							{
-								newStep.expand();
-							}
-							else
-							{
-								newStep.collapse();
-							}
-							updateCollapseText();
-						}
-					}
+				newStep.addMouseListener((panel, e) -> {
+					panel.update();
+					updateCollapseText();
 				});
-				repaint();
 				revalidate();
 			}
 		}
@@ -273,8 +263,8 @@ public class QuestOverviewPanel extends JPanel
 	{
 		questStepPanelList.forEach(panel -> {
 			boolean highlighted = false;
-			panel.setLockable(panel.panelDetails.getLockingQuestSteps() != null &&
-				(panel.panelDetails.getVars() == null || panel.panelDetails.getVars().contains(currentQuest.getVar())));
+			panel.setLockable(panel.getPanelDetails().getLockingQuestSteps() != null &&
+				(panel.getPanelDetails().getVars() == null || panel.getPanelDetails().getVars().contains(currentQuest.getVar())));
 			for (QuestStep step : panel.getSteps())
 			{
 				if (step == newStep || step.getSubsteps().contains(newStep))
@@ -493,34 +483,9 @@ public class QuestOverviewPanel extends JPanel
 	{
 		for (QuestRequirementPanel requirementPanel : reqPanels)
 		{
-			Color newColor;
-
-			if (requirementPanel.getRequirement() instanceof ItemRequirement)
-			{
-				ItemRequirement itemRequirement = (ItemRequirement) requirementPanel.getRequirement();
-				if (itemRequirement instanceof NoItemRequirement)
-				{
-					newColor = itemRequirement.getColor(client); // explicitly call this because NoItemRequirement overrides it
-				}
-				else
-				{
-					newColor = itemRequirement.getColorConsideringBank(client, false, bankItems.getItems());
-				}
-			}
-			else
-			{
-				newColor = requirementPanel.getRequirement().getColor(client);
-			}
-
-			if (newColor == Color.WHITE)
-			{
-				requirementPanel.getLabel().setToolTipText("In bank");
-			}
-			else
-			{
-				requirementPanel.getLabel().setToolTipText("");
-			}
-
+			Color newColor = questModel.getColorForRequirement(requirementPanel.getRequirement());
+			String tooltipText = newColor == Color.WHITE ? "In bank" : "";
+			requirementPanel.getLabel().setToolTipText(tooltipText);
 			requirementPanel.getLabel().setForeground(newColor);
 		}
 	}

@@ -25,30 +25,41 @@
 package com.questhelper.panel;
 
 import com.questhelper.BankItems;
-import com.questhelper.requirements.AbstractRequirement;
+import com.questhelper.RequirementContainer;
 import com.questhelper.requirements.Requirement;
+import com.questhelper.steps.QuestStep;
+import com.questhelper.util.Utils;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
-import com.questhelper.steps.QuestStep;
 import java.util.List;
+import java.util.function.BiConsumer;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.SwingUtil;
 
-public class QuestStepPanel extends JPanel
+public class QuestStepPanel extends JPanel implements RequirementContainer
 {
 	private static final int TITLE_PADDING = 5;
 
-	PanelDetails panelDetails;
+	@Getter
+	private final PanelDetails panelDetails;
 
 	private final JPanel headerPanel = new JPanel();
 	private final JLabel headerLabel = new JLabel();
@@ -194,10 +205,8 @@ public class QuestStepPanel extends JPanel
 	public String generateText(QuestStep step)
 	{
 		StringBuilder text = new StringBuilder();
-
 		step.getText().forEach(line -> text.append(line).append(" "));
-
-		return "<html><body style = 'text-align:left'>" + text + "</body></html>";
+		return Utils.textAlignLeft(text.toString());
 	}
 
 	public List<QuestStep> getSteps()
@@ -304,6 +313,18 @@ public class QuestStepPanel extends JPanel
 		}
 	}
 
+	public void update()
+	{
+		if (isCollapsed())
+		{
+			expand();
+		}
+		else
+		{
+			collapse();
+		}
+	}
+
 	void collapse()
 	{
 		if (!isCollapsed())
@@ -322,7 +343,7 @@ public class QuestStepPanel extends JPanel
 		}
 	}
 
-	boolean isCollapsed()
+	public boolean isCollapsed()
 	{
 		return !bodyPanel.isVisible();
 	}
@@ -340,5 +361,26 @@ public class QuestStepPanel extends JPanel
 	public void updateRequirements(Client client, BankItems bankItems, QuestOverviewPanel questOverviewPanel)
 	{
 		questOverviewPanel.updateRequirementPanels(client, requirementPanels, bankItems);
+	}
+
+	public void addMouseListener(BiConsumer<QuestStepPanel, MouseEvent> consumer)
+	{
+		addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				if (e.getButton() == MouseEvent.BUTTON1)
+				{
+					consumer.accept(QuestStepPanel.this, e);
+				}
+			}
+		});
+	}
+
+	@Override
+	public List<Requirement> getRequirements()
+	{
+		return Utils.getRequirements(requirementPanels);
 	}
 }
