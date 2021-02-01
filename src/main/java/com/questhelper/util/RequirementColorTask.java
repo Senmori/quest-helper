@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,48 +24,56 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+package com.questhelper.util;
 
-package com.questhelper.questhelpers;
+import com.questhelper.QuestHelperPlugin;
+import com.questhelper.requirements.ItemRequirement;
+import com.questhelper.requirements.NoItemRequirement;
+import com.questhelper.requirements.Requirement;
+import java.awt.Color;
+import java.util.concurrent.FutureTask;
+import java.util.function.Function;
+import net.runelite.api.Client;
 
-import java.util.function.Predicate;
-
-public interface Quest
+public class RequirementColorTask extends FutureTask<Color> implements Function<Requirement, Color>
 {
-	/**
-	 * Describes the difficulty of a {@link com.questhelper.QuestHelperQuest}
-	 */
-	public enum Difficulty implements Predicate<QuestHelper>
-	{
-		ALL,
-		NOVICE,
-		INTERMEDIATE,
-		EXPERIENCED,
-		MASTER,
-		GRANDMASTER,
-		MINIQUEST,
-		;
+	private final QuestHelperPlugin plugin;
+	private final Requirement requirement;
 
-		@Override
-		public boolean test(QuestHelper quest) {
-			return quest.getQuest().getDifficulty() == this || this == ALL;
-		}
+	public RequirementColorTask(QuestHelperPlugin plugin, Requirement requirement)
+	{
+		super(requirement::getDefaultColor);
+		this.plugin = plugin;
+		this.requirement = requirement;
 	}
 
-	/**
-	 * Describes if the quest is free-to-play (F2P), pay-to-play(P2P),
-	 * or a miniquest.
-	 */
-	public enum Type implements Predicate<QuestHelper>
+	@Override
+	public Color get()
 	{
-		F2P,
-		P2P,
-		MINIQUEST,
-		;
+		return apply(requirement);
+	}
 
-		@Override
-		public boolean test(QuestHelper quest)
+	@Override
+	public Color apply(Requirement requirement)
+	{
+		Client client = plugin.getClient();
+		Color color = requirement.getDefaultColor();
+		if (requirement instanceof ItemRequirement)
 		{
-			return quest.getQuest().getQuestType() == this;
+			ItemRequirement itemRequirement = (ItemRequirement) requirement;
+			if (itemRequirement instanceof NoItemRequirement)
+			{
+				return itemRequirement.getColor(client);
+			}
+			else
+			{
+				itemRequirement.getColorConsideringBank(client, false, plugin.getBankItems().getItems());
+			}
 		}
+		else
+		{
+			color = requirement.getColor(client);
+		}
+		return color;
 	}
 }

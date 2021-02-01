@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,48 +24,21 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+package com.questhelper.util;
 
-package com.questhelper.questhelpers;
+import java.util.function.Function;
+import net.runelite.client.callback.ClientThread;
 
-import java.util.function.Predicate;
-
-public interface Quest
+public class MutableClientAction<K, V> extends ClientAction<K, V>
 {
-	/**
-	 * Describes the difficulty of a {@link com.questhelper.QuestHelperQuest}
-	 */
-	public enum Difficulty implements Predicate<QuestHelper>
+	public MutableClientAction(ClientThread thread, Function<K, V> func)
 	{
-		ALL,
-		NOVICE,
-		INTERMEDIATE,
-		EXPERIENCED,
-		MASTER,
-		GRANDMASTER,
-		MINIQUEST,
-		;
-
-		@Override
-		public boolean test(QuestHelper quest) {
-			return quest.getQuest().getDifficulty() == this || this == ALL;
-		}
+		super(thread, func);
 	}
 
-	/**
-	 * Describes if the quest is free-to-play (F2P), pay-to-play(P2P),
-	 * or a miniquest.
-	 */
-	public enum Type implements Predicate<QuestHelper>
-	{
-		F2P,
-		P2P,
-		MINIQUEST,
-		;
 
-		@Override
-		public boolean test(QuestHelper quest)
-		{
-			return quest.getQuest().getQuestType() == this;
-		}
+	public void setFunction(Function<K, V> func)
+	{
+		this.func = func;
 	}
 }

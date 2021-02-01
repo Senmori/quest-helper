@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,7 +24,7 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper;
+package com.questhelper.util;
 
 import com.google.common.base.Supplier;
 import java.util.concurrent.Callable;
@@ -39,6 +40,8 @@ import net.runelite.client.callback.ClientThread;
  * <br>
  * To forcefully remove the current value, use {@link #invalidate()}
  * <br>
+ * To specify an expiration time, use {@link #expireAfter(long, TimeUnit)}
+ * <br>
  * This class is used exclusively for objects that require getting information from the {@link net.runelite.api.Client}
  * via the supplied {@link ClientThread} using the {@link Callable}.
  */
@@ -48,6 +51,14 @@ public class CachedClientObject<V> implements Supplier<V>
 	private final Callable<V> callable;
 	private long expirationNanos = 0L;
 	private AtomicReference<V> value;
+
+	/**
+	 * Represents a single cached object that can expire.
+	 * By default, it always gets the latest value via the supplied {@link Callable}.
+	 *
+	 * @param thread the client thread to run the callable on
+	 * @param callable the callable to retrieve the current value
+	 */
 	public CachedClientObject(ClientThread thread, Callable<V> callable)
 	{
 		this.thread = thread;

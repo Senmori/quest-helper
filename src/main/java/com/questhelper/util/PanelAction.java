@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,48 +24,26 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+package com.questhelper.util;
 
-package com.questhelper.questhelpers;
+import javax.swing.SwingUtilities;
 
-import java.util.function.Predicate;
-
-public interface Quest
+public class PanelAction implements Runnable
 {
-	/**
-	 * Describes the difficulty of a {@link com.questhelper.QuestHelperQuest}
-	 */
-	public enum Difficulty implements Predicate<QuestHelper>
+	public static void run(Runnable runnable)
 	{
-		ALL,
-		NOVICE,
-		INTERMEDIATE,
-		EXPERIENCED,
-		MASTER,
-		GRANDMASTER,
-		MINIQUEST,
-		;
-
-		@Override
-		public boolean test(QuestHelper quest) {
-			return quest.getQuest().getDifficulty() == this || this == ALL;
-		}
+		new PanelAction(runnable).run();
 	}
 
-	/**
-	 * Describes if the quest is free-to-play (F2P), pay-to-play(P2P),
-	 * or a miniquest.
-	 */
-	public enum Type implements Predicate<QuestHelper>
+	private final Runnable runnable;
+	public PanelAction(Runnable runnable)
 	{
-		F2P,
-		P2P,
-		MINIQUEST,
-		;
+		this.runnable = runnable;
+	}
 
-		@Override
-		public boolean test(QuestHelper quest)
-		{
-			return quest.getQuest().getQuestType() == this;
-		}
+	@Override
+	public void run()
+	{
+		SwingUtilities.invokeLater(runnable);
 	}
 }

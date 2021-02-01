@@ -32,10 +32,12 @@ import com.questhelper.panel.PanelDetails;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.QuestStep;
+import com.questhelper.util.CachedClientObject;
+import com.questhelper.util.ClientAction;
+import com.questhelper.util.RequirementColorTask;
 import java.awt.Color;
 import java.util.Collection;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
@@ -70,22 +72,15 @@ public final class QuestModel
 			.build(new CacheLoader<Requirement, Color>()
 			{
 				@Override
-				public Color load(@Nonnull Requirement requirement) throws Exception
+				public Color load(@Nonnull Requirement requirement)
 				{
 					// ensure we run on the client thread
 					AtomicReference<Color> color = new AtomicReference<>(Color.RED);
-					FutureTask<Color> task = new FutureTask<>(() -> requirement.getColor(client));
-					plugin.getClientThread().invoke(() -> {
-						try
-						{
-							Color reqColor = task.get();
-							color.set(reqColor);
-						}
-						catch (InterruptedException | ExecutionException e)
-						{
-							// error
-							log.error("Error checking requirement '" + requirement.getClass().getName() + "'.", e);
-						}
+					RequirementColorTask colorTask = new RequirementColorTask(plugin, requirement);
+					ClientAction.invoke(plugin.getClientThread(), requirement, (req) -> {
+						Color reqColor = colorTask.get();
+						color.set(reqColor);
+						return color.get();
 					});
 					return color.get();
 				}

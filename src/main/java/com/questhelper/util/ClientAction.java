@@ -1,4 +1,5 @@
 /*
+ *
  *  * Copyright (c) 2021, Senmori
  *  * All rights reserved.
  *  *
@@ -23,48 +24,45 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+package com.questhelper.util;
 
-package com.questhelper.questhelpers;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import javax.annotation.Nullable;
+import net.runelite.client.callback.ClientThread;
 
-import java.util.function.Predicate;
-
-public interface Quest
+public class ClientAction<K, V>
 {
-	/**
-	 * Describes the difficulty of a {@link com.questhelper.QuestHelperQuest}
-	 */
-	public enum Difficulty implements Predicate<QuestHelper>
+	public static <K,V> V invoke(ClientThread thread, K key, Function<K,V> func)
 	{
-		ALL,
-		NOVICE,
-		INTERMEDIATE,
-		EXPERIENCED,
-		MASTER,
-		GRANDMASTER,
-		MINIQUEST,
-		;
+		return new ClientAction<>(thread,func).get(key);
+	}
+	private final ClientThread thread;
+	protected Function<K, V> func;
 
-		@Override
-		public boolean test(QuestHelper quest) {
-			return quest.getQuest().getDifficulty() == this || this == ALL;
-		}
+	public ClientAction(ClientThread thread, Function<K, V> func)
+	{
+		this.thread = thread;
+		this.func = func;
 	}
 
-	/**
-	 * Describes if the quest is free-to-play (F2P), pay-to-play(P2P),
-	 * or a miniquest.
-	 */
-	public enum Type implements Predicate<QuestHelper>
+	@Nullable
+	public V get(K key)
 	{
-		F2P,
-		P2P,
-		MINIQUEST,
-		;
-
-		@Override
-		public boolean test(QuestHelper quest)
-		{
-			return quest.getQuest().getQuestType() == this;
-		}
+		AtomicReference<V> value = new AtomicReference<>(null);
+		FutureTask<V> task = new FutureTask<>(() -> func.apply(key));
+		thread.invoke(() -> {
+			try
+			{
+				value.set(task.get());
+			}
+			catch (InterruptedException | ExecutionException ignored)
+			{
+				value.set(null);
+			}
+		});
+		return value.get();
 	}
 }
