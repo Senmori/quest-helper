@@ -101,4 +101,12 @@ public interface Requirement
 
 		return lines;
 	}
+
+	/**
+	 * @return the default @{@link Color} to use if {@link #check(Client)} fails to return a value
+	 */
+	default Color getDefaultColor()
+	{
+		return Color.RED;
+	}
 }

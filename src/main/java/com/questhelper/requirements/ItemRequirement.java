@@ -170,12 +170,18 @@ public class ItemRequirement extends AbstractRequirement
 	}
 
 	@Override
+	public Color getDefaultColor()
+	{
+		return Color.GRAY;
+	}
+
+	@Override
 	public Color getColor(Client client)
 	{
 		Color color;
 		if (!this.isActualItem())
 		{
-			color = Color.GRAY;
+			color = getDefaultColor();
 		}
 		else if (this.check(client))
 		{
@@ -193,7 +199,7 @@ public class ItemRequirement extends AbstractRequirement
 		Color color;
 		if (!this.isActualItem())
 		{
-			color = Color.GRAY;
+			color = getDefaultColor();
 		}
 		else if (this.check(client, checkConsideringSlotRestrictions))
 		{
