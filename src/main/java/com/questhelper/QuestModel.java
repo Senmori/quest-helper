@@ -67,6 +67,7 @@ public final class QuestModel
 	{
 		this.plugin = plugin;
 		this.client = plugin.getClient();
+		final ClientThread thread = plugin.getClientThread();
 		colorCache = CacheBuilder.newBuilder()
 			.refreshAfterWrite(1, TimeUnit.SECONDS)
 			.build(new CacheLoader<Requirement, Color>()
@@ -75,19 +76,16 @@ public final class QuestModel
 				public Color load(@Nonnull Requirement requirement)
 				{
 					// ensure we run on the client thread
-					AtomicReference<Color> color = new AtomicReference<>(Color.RED);
+					AtomicReference<Color> color = new AtomicReference<>(requirement.getDefaultColor());
 					RequirementColorTask colorTask = new RequirementColorTask(plugin, requirement);
-					ClientAction.invoke(plugin.getClientThread(), requirement, (req) -> {
+					ClientAction.invoke(thread, requirement, (req) -> {
 						Color reqColor = colorTask.get();
 						color.set(reqColor);
-						return color.get();
+						return reqColor;
 					});
 					return color.get();
 				}
 			});
-
-
-		ClientThread thread = plugin.getClientThread();
 		currentQuestState = new CachedClientObject<>(thread, () -> getCurrentQuest().getState(client));
 		currentGameState = new CachedClientObject<>(thread, client::getGameState);
 		currentQuestVar = new CachedClientObject<>(thread, () -> getCurrentQuest().getVar());
