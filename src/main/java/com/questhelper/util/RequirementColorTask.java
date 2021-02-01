@@ -35,6 +35,11 @@ import java.util.concurrent.FutureTask;
 import java.util.function.Function;
 import net.runelite.api.Client;
 
+/**
+ * A {@link FutureTask} that returns the appropriate {@link Color} for a given {@link Requirement}.
+ * <br>
+ * This task should not be used by itself, it should be ran on the {@link net.runelite.client.callback.ClientThread}.
+ */
 public class RequirementColorTask extends FutureTask<Color> implements Function<Requirement, Color>
 {
 	private final QuestHelperPlugin plugin;

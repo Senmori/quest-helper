@@ -28,15 +28,15 @@ package com.questhelper.util;
 
 import javax.swing.SwingUtilities;
 
-public class PanelAction implements Runnable
+public class SwingAction implements Runnable
 {
-	public static void run(Runnable runnable)
+	public static void invoke(Runnable runnable)
 	{
-		new PanelAction(runnable).run();
+		new SwingAction(runnable).run();
 	}
 
 	private final Runnable runnable;
-	public PanelAction(Runnable runnable)
+	public SwingAction(Runnable runnable)
 	{
 		this.runnable = runnable;
 	}

@@ -33,21 +33,34 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import net.runelite.client.callback.ClientThread;
 
+/**
+ * Create a {@link Function} that will be ran on the {@link ClientThread} at the
+ * next opportunity.
+ */
 public class ClientAction<K, V>
 {
-	public static <K,V> V invoke(ClientThread thread, K key, Function<K,V> func)
-	{
-		return new ClientAction<>(thread,func).get(key);
-	}
 	private final ClientThread thread;
 	protected Function<K, V> func;
 
+	/**
+	 * Specify a {@link Function} that will be run on the {@link ClientThread} at the
+	 * next opportunity
+	 *
+	 * @param thread client thread
+	 * @param func the function to run
+	 */
 	public ClientAction(ClientThread thread, Function<K, V> func)
 	{
 		this.thread = thread;
 		this.func = func;
 	}
 
+	/**
+	 * Get the corresponding value according to the specified {@link Function}.
+	 *
+	 * @param key the function key
+	 * @return the value the {@link Function} returns. Can be null.
+	 */
 	@Nullable
 	public V get(K key)
 	{
