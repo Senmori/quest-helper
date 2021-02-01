@@ -42,7 +42,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -51,6 +50,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.QuestState;
 import net.runelite.client.callback.ClientThread;
@@ -71,17 +71,21 @@ public class QuestController
 	private final CachedClientObject<List<QuestHelper>> filteredQuests;
 	private final Function<QuestHelper, Boolean> showCompletedQuest;
 	private final LoadingCache<QuestHelperQuest, QuestState> questStateCache;
+
+	// helper fields
+	private final ClientAction<QuestHelperQuest, QuestState> questStateAction;
 	public QuestController(QuestHelperPlugin plugin, Map<String, QuestHelper> quests)
 	{
 		this.plugin = plugin;
 		this.quests = quests;
-		ClientThread thread = plugin.getClientThread();
-		QuestHelperConfig config = plugin.getConfig();
+		final ClientThread thread = plugin.getClientThread();
+		final QuestHelperConfig config = plugin.getConfig();
+		final Client client = plugin.getClient();
 
 		showCompletedQuest = q -> q.getConfig().showCompletedQuests() && q.isCompleted() || !q.isCompleted();
 
 		Callable<List<QuestHelper>> filteredQuestsCallable = () -> {
-			if (plugin.getClient().getGameState() != GameState.LOGGED_IN) {
+			if (client.getGameState() != GameState.LOGGED_IN) {
 				return Lists.newArrayList(); // return empty list
 			}
 			return getRegisteredQuests()
@@ -93,6 +97,8 @@ public class QuestController
 				.collect(Collectors.toList());
 		};
 		filteredQuests = new CachedClientObject<>(thread, filteredQuestsCallable);
+		questStateAction = new ClientAction<>(thread, q -> q.getState(client));
+
 		questStateCache = CacheBuilder.newBuilder()
 			.refreshAfterWrite(1, TimeUnit.SECONDS)
 			.maximumSize(QuestHelperQuest.values().length)
@@ -102,19 +108,7 @@ public class QuestController
 				public QuestState load(@Nonnull QuestHelperQuest quest)
 				{
 					AtomicReference<QuestState> state = new AtomicReference<>(null);
-					FutureTask<QuestState> task = new FutureTask<>(() -> quest.getState(plugin.getClient()));
-					thread.invoke(() -> {
-						try
-						{
-							state.set(task.get());
-						}
-						catch (InterruptedException | ExecutionException e)
-						{
-							log.error("Error retrieving quest state for quest " + quest.name(), e);
-							state.set(QuestState.NOT_STARTED);
-						}
-					});
-
+					state.set(questStateAction.get(quest));
 					return state.get();
 				}
 			});
@@ -124,8 +118,7 @@ public class QuestController
 	private void loadQuests()
 	{
 		// add quests to cache
-		ClientAction<QuestHelperQuest, QuestState> getState = new ClientAction<>(plugin.getClientThread(), q -> q.getState(plugin.getClient()));
-		Stream.of(QuestHelperQuest.values()).forEach(quest -> questStateCache.put(quest, Objects.requireNonNull(getState.get(quest))));
+		Stream.of(QuestHelperQuest.values()).forEach(quest -> questStateCache.put(quest, Objects.requireNonNull(questStateAction.get(quest))));
 	}
 
 	/**
@@ -154,17 +147,17 @@ public class QuestController
 	/**
 	 * Get the {@link QuestState} for each {@link QuestHelper} supplied.
 	 *
-	 * @param quests the quests to get the state
+	 * @param questHelpers the quests to get the state
 	 * @return an immutable map containing the quest and it's current {@link QuestState}
 	 */
 	@Nonnull
-	public Map<QuestHelperQuest, QuestState> getStatesForQuests(Collection<QuestHelper> quests)
+	public Map<QuestHelperQuest, QuestState> getStatesForQuests(Collection<QuestHelper> questHelpers)
 	{
-		Collection<QuestHelperQuest> questHelperQuests = quests.stream().map(QuestHelper::getQuest).collect(Collectors.toList());
+		Collection<QuestHelperQuest> quests = questHelpers.stream().map(QuestHelper::getQuest).collect(Collectors.toList());
 		Map<QuestHelperQuest, QuestState> map = ImmutableMap.of(); // default empty immutable map
 		try
 		{
-			map = questStateCache.getAll(questHelperQuests);
+			map = questStateCache.getAll(quests);
 		}
 		catch (ExecutionException e)
 		{
