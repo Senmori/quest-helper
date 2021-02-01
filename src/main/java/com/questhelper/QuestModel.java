@@ -77,12 +77,9 @@ public final class QuestModel
 				{
 					// ensure we run on the client thread
 					AtomicReference<Color> color = new AtomicReference<>(requirement.getDefaultColor());
-					RequirementColorTask colorTask = new RequirementColorTask(plugin, requirement);
-					ClientAction.invoke(thread, requirement, (req) -> {
-						Color reqColor = colorTask.get();
-						color.set(reqColor);
-						return reqColor;
-					});
+					RequirementColorTask task = new RequirementColorTask(plugin, requirement);
+					ClientAction<Requirement, Color> action = new ClientAction<>(thread, task);
+					color.set(action.get(requirement)); // this waits until a value is returned
 					return color.get();
 				}
 			});
@@ -170,10 +167,7 @@ public final class QuestModel
 	@Nullable
 	public QuestStep getCurrentStep()
 	{
-		if (getCurrentQuest() == null)
-		{
-			throw new IllegalStateException("Cannot retrieve the quest state without an active quest.");
-		}
+		throwErrorIfQuestIsNull();
 		return currentQuest.getCurrentStep();
 	}
 
@@ -183,10 +177,7 @@ public final class QuestModel
 	@Nonnull
 	public QuestState getQuestState()
 	{
-		if (getCurrentQuest() == null)
-		{
-			throw new IllegalStateException("Cannot retrieve the quest state without an active quest.");
-		}
+		throwErrorIfQuestIsNull();
 		return currentQuestState.get();
 	}
 
@@ -198,10 +189,15 @@ public final class QuestModel
 
 	public int getQuestVar()
 	{
+		throwErrorIfQuestIsNull();
+		return currentQuestVar.get();
+	}
+
+	private void throwErrorIfQuestIsNull()
+	{
 		if (getCurrentQuest() == null)
 		{
 			throw new IllegalStateException("Cannot retrieve the quest state without an active quest.");
 		}
-		return currentQuestVar.get();
 	}
 }

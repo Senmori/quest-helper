@@ -84,7 +84,7 @@ public class QuestController
 			if (plugin.getClient().getGameState() != GameState.LOGGED_IN) {
 				return Lists.newArrayList(); // return empty list
 			}
-			return quests.values()
+			return getRegisteredQuests()
 				.stream()
 				.filter(config.filterListBy())
 				.filter(config.difficulty())
