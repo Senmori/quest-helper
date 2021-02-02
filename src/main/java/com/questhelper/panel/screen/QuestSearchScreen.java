@@ -84,6 +84,7 @@ public class QuestSearchScreen extends QuestScreen
 	{
 		updateQuestList();
 		updateSearchFilter(searchPanel.getText());
+		log.debug("UPDATED SEARCH SCREEN");
 	}
 
 	public void emptySearchBar()
@@ -154,11 +155,8 @@ public class QuestSearchScreen extends QuestScreen
 			searchPanel.getAllQuestsCompletedPanel().removeAll();
 			JLabel noMatch = new JLabel();
 			noMatch.setForeground(Color.GRAY);
-			if (gameState != GameState.LOGGED_IN)
-			{
-				noMatch.setText(Utils.textAlignLeft("Log in to see available quests"));
-			}
-			else
+			noMatch.setText(Utils.textAlignLeft("Log in to see available quests"));
+			if (gameState == GameState.LOGGED_IN)
 			{
 				noMatch.setText(Utils.textAlignLeft("No quests are available that match your current filters"));
 			}

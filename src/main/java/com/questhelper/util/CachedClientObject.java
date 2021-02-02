@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 
 /**
@@ -47,10 +48,12 @@ import net.runelite.client.callback.ClientThread;
  */
 public class CachedClientObject<V> implements Supplier<V>
 {
+	private final Client client;
 	private final ClientThread thread;
 	private final Callable<V> callable;
 	private long expirationNanos = 0L;
 	private AtomicReference<V> value;
+	private final V defaultValue;
 
 	/**
 	 * Represents a single cached object that can expire.
@@ -59,11 +62,14 @@ public class CachedClientObject<V> implements Supplier<V>
 	 * @param thread the client thread to run the callable on
 	 * @param callable the callable to retrieve the current value
 	 */
-	public CachedClientObject(ClientThread thread, Callable<V> callable)
+	public CachedClientObject(Client client, ClientThread thread, V defaultValue, Callable<V> callable)
 	{
+		this.client = client;
 		this.thread = thread;
 		this.callable = callable;
-		this.value = new AtomicReference<>(null);
+		this.value = new AtomicReference<>(defaultValue);
+		this.defaultValue = defaultValue;
+
 	}
 
 	/**
@@ -106,19 +112,17 @@ public class CachedClientObject<V> implements Supplier<V>
 
 	private V getValue()
 	{
+		assert client.isClientThread() : "CachedClientObject must be run on the client thread";
 		AtomicReference<V> value = new AtomicReference<>();
 		FutureTask<V> task = new FutureTask<>(callable);
-		thread.invoke(() -> {
-			try
-			{
-				V temp = task.get();
-				value.set(temp);
-			}
-			catch (InterruptedException | ExecutionException ignored)
-			{
-				value.set(this.value.get());
-			}
-		});
+		try
+		{
+			value.set(task.get());
+		}
+		catch (InterruptedException | ExecutionException ignored)
+		{
+			value.set(defaultValue);
+		}
 		return value.get();
 	}
 }

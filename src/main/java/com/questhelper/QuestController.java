@@ -36,6 +36,7 @@ import com.questhelper.questhelpers.Quest;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.util.CachedClientObject;
 import com.questhelper.util.ClientAction;
+import com.questhelper.util.FilteredQuestTask;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
 import net.runelite.api.QuestState;
 import net.runelite.client.callback.ClientThread;
 
@@ -82,18 +82,8 @@ public class QuestController
 
 		showCompletedQuest = q -> q.getConfig().showCompletedQuests() && q.isCompleted() || !q.isCompleted();
 
-		filteredQuests = new CachedClientObject<>(thread, () -> {
-			if (client.getGameState() != GameState.LOGGED_IN) {
-				return Lists.newArrayList(); // return empty list
-			}
-			return quests.values()
-				.stream()
-				.filter(config.filterListBy())
-				.filter(config.difficulty())
-				.filter(showCompletedQuest::apply)
-				.sorted(config.orderListBy())
-				.collect(Collectors.toList());
-		});
+		FilteredQuestTask filteredQuestTask = new FilteredQuestTask(client, this, plugin.getConfig());
+		filteredQuests = new CachedClientObject<>(client, thread, Lists.newArrayList(), filteredQuestTask);
 		questStateAction = new ClientAction<>(thread, q -> q.getState(client));
 
 		questStateCache = CacheBuilder.newBuilder()
@@ -148,6 +138,10 @@ public class QuestController
 	@Nonnull
 	public Map<QuestHelperQuest, QuestState> getStatesForQuests(Collection<QuestHelper> questHelpers)
 	{
+		if (questHelpers == null)
+		{
+			return questStateCache.asMap(); // return all the quests :D
+		}
 		Collection<QuestHelperQuest> quests = questHelpers.stream().map(QuestHelper::getQuest).collect(Collectors.toList());
 		Map<QuestHelperQuest, QuestState> map = ImmutableMap.of(); // default empty immutable map
 		try

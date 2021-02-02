@@ -113,7 +113,6 @@ public class QuestHelperPanel extends PluginPanel
 
 		add(activeContainer, BorderLayout.CENTER);
 		setActiveDisplay(questSearchScreen);
-		questSearchScreen.update();
 	}
 
 	public final void setActiveDisplay(QuestScreen screen)

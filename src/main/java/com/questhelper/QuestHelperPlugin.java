@@ -35,6 +35,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.questhelper.banktab.QuestBankTab;
 import com.questhelper.banktab.QuestHelperBankTagService;
+import com.questhelper.event.PluginStart;
+import com.questhelper.event.PluginStop;
 import com.questhelper.panel.QuestHelperPanel;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.steps.QuestStep;
@@ -236,10 +238,6 @@ public class QuestHelperPlugin extends Plugin
 		questController = new QuestController(this);
 		quests = scanAndInstantiate(getClass().getClassLoader());
 
-		clientThread.invoke(() -> {
-			quests.values().forEach(quest -> questController.addQuest(quest.getQuest(), quest.getState(client)));
-		});
-
 		overlayManager.add(questHelperOverlay);
 		overlayManager.add(questHelperWorldOverlay);
 		overlayManager.add(questHelperWidgetOverlay);
@@ -264,11 +262,18 @@ public class QuestHelperPlugin extends Plugin
 		{
 			loadQuestList = true;
 		}
+		eventBus.post(new PluginStart(this));
+	}
+
+	private void updateQuests()
+	{
+		quests.values().forEach(quest -> questController.addQuest(quest.getQuest(), quest.getState(client)));
 	}
 
 	@Override
 	protected void shutDown()
 	{
+		eventBus.post(new PluginStop(this));
 		eventBus.unregister(bankTagsMain);
 		overlayManager.remove(questHelperOverlay);
 		overlayManager.remove(questHelperWorldOverlay);
@@ -285,6 +290,14 @@ public class QuestHelperPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onPluginStart(PluginStart event)
+	{
+		updateQuests();
+		panel.getQuestSearchScreen().update();
+		log.debug("PLUGIN START");
+	}
+
+	@Subscribe
 	public void onGameTick(GameTick event)
 	{
 		if (sidebarSelectedQuest != null)
@@ -294,6 +307,11 @@ public class QuestHelperPlugin extends Plugin
 		}
 		else if (selectedQuest != null)
 		{
+			if (questModel.getCurrentQuest() == null || questModel.getCurrentQuest() != selectedQuest)
+			{
+				questModel.invalidateAll();
+				questModel.setCurrentQuest(selectedQuest);
+			}
 			if (selectedQuest.getCurrentStep() != null)
 			{
 				panel.updateSteps();

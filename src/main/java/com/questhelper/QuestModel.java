@@ -83,9 +83,9 @@ public final class QuestModel
 					return color.get();
 				}
 			});
-		currentQuestState = new CachedClientObject<>(thread, () -> getCurrentQuest().getState(client));
-		currentGameState = new CachedClientObject<>(thread, client::getGameState);
-		currentQuestVar = new CachedClientObject<>(thread, () -> getCurrentQuest().getVar());
+		currentQuestState = new CachedClientObject<>(client, thread, QuestState.NOT_STARTED, () -> getCurrentQuest().getState(client));
+		currentGameState = new CachedClientObject<>(client, thread, GameState.UNKNOWN, client::getGameState);
+		currentQuestVar = new CachedClientObject<>(client, thread, -1, () -> getCurrentQuest().getVar());
 	}
 
 	/**
