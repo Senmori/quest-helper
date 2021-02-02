@@ -23,10 +23,9 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-package com.questhelper.panel.component;
+package com.questhelper.panel;
 
 import com.questhelper.QuestHelperPlugin;
-import com.questhelper.panel.DropdownRenderer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;

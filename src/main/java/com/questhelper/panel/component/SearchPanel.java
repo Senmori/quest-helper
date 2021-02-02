@@ -28,6 +28,7 @@ package com.questhelper.panel.component;
 
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
+import com.questhelper.panel.PanelUtil;
 import com.questhelper.questhelpers.Quest;
 import com.questhelper.util.Utils;
 import java.awt.BorderLayout;

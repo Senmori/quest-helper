@@ -232,7 +232,14 @@ public class QuestHelperPlugin extends Plugin
 		injector.injectMembers(bankTagsMain);
 		eventBus.register(bankTagsMain);
 
+		questModel = new QuestModel(this);
+		questController = new QuestController(this);
 		quests = scanAndInstantiate(getClass().getClassLoader());
+
+		clientThread.invoke(() -> {
+			quests.values().forEach(quest -> questController.addQuest(quest.getQuest(), quest.getState(client)));
+		});
+
 		overlayManager.add(questHelperOverlay);
 		overlayManager.add(questHelperWorldOverlay);
 		overlayManager.add(questHelperWidgetOverlay);
@@ -240,8 +247,6 @@ public class QuestHelperPlugin extends Plugin
 		{
 			overlayManager.add(questHelperDebugOverlay);
 		}
-		questModel = new QuestModel(this);
-		questController = new QuestController(this, quests);
 
 		final BufferedImage icon = Icon.QUEST_ICON.getImage();
 

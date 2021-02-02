@@ -39,14 +39,12 @@ import com.questhelper.util.ClientAction;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -67,36 +65,35 @@ public class QuestController
 {
 
 	private final QuestHelperPlugin plugin;
-	private final Map<String, QuestHelper> quests;
+	private final Map<String, QuestHelper> quests = new ConcurrentHashMap<>(QuestHelperQuest.values().length);
 	private final CachedClientObject<List<QuestHelper>> filteredQuests;
 	private final Function<QuestHelper, Boolean> showCompletedQuest;
 	private final LoadingCache<QuestHelperQuest, QuestState> questStateCache;
 
 	// helper fields
 	private final ClientAction<QuestHelperQuest, QuestState> questStateAction;
-	public QuestController(QuestHelperPlugin plugin, Map<String, QuestHelper> quests)
+
+	public QuestController(QuestHelperPlugin plugin)
 	{
 		this.plugin = plugin;
-		this.quests = quests;
 		final ClientThread thread = plugin.getClientThread();
 		final QuestHelperConfig config = plugin.getConfig();
 		final Client client = plugin.getClient();
 
 		showCompletedQuest = q -> q.getConfig().showCompletedQuests() && q.isCompleted() || !q.isCompleted();
 
-		Callable<List<QuestHelper>> filteredQuestsCallable = () -> {
+		filteredQuests = new CachedClientObject<>(thread, () -> {
 			if (client.getGameState() != GameState.LOGGED_IN) {
 				return Lists.newArrayList(); // return empty list
 			}
-			return getRegisteredQuests()
+			return quests.values()
 				.stream()
 				.filter(config.filterListBy())
 				.filter(config.difficulty())
 				.filter(showCompletedQuest::apply)
 				.sorted(config.orderListBy())
 				.collect(Collectors.toList());
-		};
-		filteredQuests = new CachedClientObject<>(thread, filteredQuestsCallable);
+		});
 		questStateAction = new ClientAction<>(thread, q -> q.getState(client));
 
 		questStateCache = CacheBuilder.newBuilder()
@@ -112,13 +109,11 @@ public class QuestController
 					return state.get();
 				}
 			});
-		loadQuests();
 	}
 
-	private void loadQuests()
+	public void addQuest(@Nonnull QuestHelperQuest quest, @Nonnull QuestState state)
 	{
-		// add quests to cache
-		Stream.of(QuestHelperQuest.values()).forEach(quest -> questStateCache.put(quest, Objects.requireNonNull(questStateAction.get(quest))));
+		questStateCache.put(quest, state);
 	}
 
 	/**
