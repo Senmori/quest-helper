@@ -25,7 +25,8 @@
  */
 package com.questhelper.steps;
 
-import com.questhelper.requirements.AbstractRequirement;
+import com.questhelper.QuestHelperPlugin;
+import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.overlay.DirectionArrow;
 import com.questhelper.steps.tools.QuestPerspective;
@@ -33,26 +34,26 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Line2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
 import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.SpriteID;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.NpcChanged;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.client.eventbus.Subscribe;
-import com.questhelper.questhelpers.QuestHelper;
-import com.questhelper.QuestHelperPlugin;
-import static com.questhelper.QuestHelperWorldOverlay.IMAGE_Z_OFFSET;
 import net.runelite.client.ui.overlay.OverlayUtil;
+import static com.questhelper.QuestHelperWorldOverlay.IMAGE_Z_OFFSET;
 
 public class NpcStep extends DetailedQuestStep
 {
@@ -61,6 +62,7 @@ public class NpcStep extends DetailedQuestStep
 
 	private final int npcID;
 	private final ArrayList<Integer> alternateNpcIDs = new ArrayList<>();
+	private final List<WorldPoint> safespots = new ArrayList<>();
 
 	private boolean allowMultipleHighlights;
 
@@ -117,6 +119,11 @@ public class NpcStep extends DetailedQuestStep
 	public void addAlternateNpcs(Integer... alternateNpcIDs)
 	{
 		this.alternateNpcIDs.addAll(Arrays.asList(alternateNpcIDs));
+	}
+
+	public void addSafeSpots(WorldPoint... points)
+	{
+		this.safespots.addAll(Arrays.asList(points));
 	}
 
 	public List<Integer> allIds()
@@ -217,6 +224,19 @@ public class NpcStep extends DetailedQuestStep
 			return;
 		}
 
+		if (!safespots.isEmpty())
+		{
+			BufferedImage combatIcon = spriteManager.getSprite(SpriteID.TAB_COMBAT, 0);
+			for (WorldPoint location : safespots)
+			{
+				LocalPoint localPoint = LocalPoint.fromWorld(client, location);
+				if (localPoint != null)
+				{
+					OverlayUtil.renderTileOverlay(client, graphics, localPoint, combatIcon, questHelper.getConfig().targetOverlayColor());
+				}
+			}
+		}
+
 		for (NPC otherNpc : npcs)
 		{
 			OverlayUtil.renderActorOverlayImage(graphics, otherNpc, icon, questHelper.getConfig().targetOverlayColor(),
@@ -235,6 +255,7 @@ public class NpcStep extends DetailedQuestStep
 	@Override
 	public void renderArrow(Graphics2D graphics)
 	{
+		if (questHelper.getConfig().showMiniMapArrow()) {
 		if (npcs.size() == 0)
 		{
 			super.renderArrow(graphics);
@@ -252,25 +273,25 @@ public class NpcStep extends DetailedQuestStep
 			}
 		}
 	}
+	}
 
 	@Override
-	public void renderMinimapArrow(Graphics2D graphics)
-	{
-		if (npcs.contains(client.getHintArrowNpc()))
-		{
-			return;
+	public void renderMinimapArrow(Graphics2D graphics) {
+		if (questHelper.getConfig().showMiniMapArrow()) {
+			if (npcs.contains(client.getHintArrowNpc())) {
+				return;
+			}
+
+			if (!npcs.isEmpty() && npcs.get(0).getMinimapLocation() != null) {
+				int x = npcs.get(0).getMinimapLocation().getX();
+				int y = npcs.get(0).getMinimapLocation().getY();
+				Line2D.Double line = new Line2D.Double(x, y - 18, x, y - 8);
+
+				DirectionArrow.drawMinimapArrow(graphics, line, getQuestHelper().getConfig().targetOverlayColor());
+				return;
+			}
+
+			super.renderMinimapArrow(graphics);
 		}
-
-		if (!npcs.isEmpty() && npcs.get(0).getMinimapLocation() != null)
-		{
-			int x = npcs.get(0).getMinimapLocation().getX();
-			int y = npcs.get(0).getMinimapLocation().getY();
-			Line2D.Double line = new Line2D.Double(x, y - 18, x, y - 8);
-
-			DirectionArrow.drawMinimapArrow(graphics, line, getQuestHelper().getConfig().targetOverlayColor());
-			return;
-		}
-
-		super.renderMinimapArrow(graphics);
 	}
 }
