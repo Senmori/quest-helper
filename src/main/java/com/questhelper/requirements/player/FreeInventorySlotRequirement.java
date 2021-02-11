@@ -65,6 +65,10 @@ public class FreeInventorySlotRequirement extends AbstractRequirement
 		ItemContainer container = client.getItemContainer(getInventoryID());
 		if (container != null)
 		{
+			if (getInventoryID() == InventoryID.INVENTORY && container.size() < 28)
+			{
+				return Math.abs(28 - container.size()) >= getNumSlotsFree();
+			}
 			return Stream.of(container.getItems()).filter(this::isOpenSlot).count() >= getNumSlotsFree();
 		}
 		return false;

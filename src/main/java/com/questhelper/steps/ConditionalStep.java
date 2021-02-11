@@ -69,7 +69,7 @@ public class ConditionalStep extends QuestStep implements OwnerStep
 
 	public ConditionalStep(QuestHelper questHelper, QuestStep step, Requirement... requirements)
 	{
-		super(questHelper);
+		super(questHelper, step.getText());
 		this.requirements = requirements;
 		this.steps = new LinkedHashMap<>();
 		this.steps.put(null, step);
@@ -343,15 +343,10 @@ public class ConditionalStep extends QuestStep implements OwnerStep
 	@Override
 	public QuestStep getSidePanelStep()
 	{
-		if (text != null)
-		{
-			return this;
-		}
-		else if (currentStep != null)
+		if (currentStep != null)
 		{
 			return currentStep.getSidePanelStep();
 		}
-
 		return this;
 	}
 

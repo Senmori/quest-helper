@@ -73,6 +73,6 @@ public class CombatLevelRequirement extends AbstractRequirement
 	@Override
 	public String getDisplayText()
 	{
-		return "Combat Level " + requiredLevel;
+		return "Combat Level " + requiredLevel + (operation == Operation.GREATER_EQUAL ? "+" : "");
 	}
 }
